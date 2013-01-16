@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block main %}
+
+
+
+    <form class="form-signin" method="post">
+        <h2 class="form-signin-heading">Please sign in</h2>
+        {{ form.username(placeholder='Username') }}
+        {{ form.password(placeholder='Password') }}
+        <!--<input type="text" class="input-block-level" placeholder="Email address">-->
+        <!--<input type="password" class="input-block-level" placeholder="Password">-->
+        <!--&lt;!&ndash;<label class="checkbox">&ndash;&gt;-->
+            <!--&lt;!&ndash;<input type="checkbox" value="remember-me"> Remember me&ndash;&gt;-->
+        <!--&lt;!&ndash;</label>&ndash;&gt;-->
+        <button class="btn btn-large btn-primary" type="submit">Sign in</button>
+    </form>
+
+
+
+{% endblock %}

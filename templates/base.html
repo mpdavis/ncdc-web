@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>CDC</title>
+
+    <link href="{{ url_for('static', filename='css/bootstrap.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+
+</head>
+
+<body>
+
+    <div class="container-narrow">
+
+        <div class="masthead">
+            <ul class="nav nav-pills pull-right">
+                <li{% if nav == "home" %} class="active"{% endif %}><a href="{{ url_for('home') }}">Home</a></li>
+                <li{% if nav == "about" %} class="active"{% endif %}><a href="{{ url_for('about') }}">About</a></li>
+                <li{% if nav == "login" %} class="active"{% endif %}><a href="{{ url_for('login') }}">Login</a></li>
+            </ul>
+            <h3 class="muted">Cyber Defense Competition</h3>
+        </div>
+
+        <hr>
+
+        {% block main %}{% endblock %}
+
+        <div class="footer">
+            <hr>
+            <p>&copy; CDC 2013</p>
+        </div>
+
+    </div>
+
+    <!-- JavaScript at the bottom for fast page loading -->
+
+    <!-- Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if necessary -->
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="/static/js/libs/jquery.js">\x3C/script>')</script>
+
+    <!-- Additional JavaScript libraries and plugins... -->
+    {% block js %}{% endblock %}
+
+    </body>
+</html>
