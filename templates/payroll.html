@@ -1,1 +1,43 @@
-Logged in as: {{ username }}
+{% extends "base.html" %}
+
+{% block main %}
+
+    <div class="user-info">
+        Logged in as: {{ username }}
+    </div>
+
+    <form class="payroll-form" id="payroll-form" method="post">
+        <table class="table table-bordered table-striped">
+            <thead>
+            <tr>
+                <th>Day</th>
+                <th>Date</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Hours</th>
+                <th>Approved By</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% if table_rows %}
+                {% for row in table_rows %}
+                    <tr>
+                        <td>{{ row.date.strftime('%A') }}</td>
+                        <td>{{ row.date.strftime('%B %d') }}</td>
+                        <td><input type="text" id="clockin-{{ row.id }}" class="payroll-input"></td>
+                        <td><input type="text" id="clockout-{{ row.d }}" class="payroll-input"></td>
+                        <td></td>
+                        <td>{{ row.approved_by or '' }}</td>
+                    </tr>
+                {% endfor %}
+            {% endif %}
+            </tbody>
+        </table>
+        <div style="height: 40px;">
+            <input type="submit" value="Submit" class="btn btn-primary pull-right">
+        </div>
+
+    </form>
+
+
+{% endblock %}

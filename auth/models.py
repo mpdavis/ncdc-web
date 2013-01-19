@@ -1,3 +1,5 @@
+import datetime
+
 from flask_mongoengine import Document
 from flask_mongoengine import DoesNotExist
 
@@ -27,3 +29,11 @@ class User(Document):
             return user
         except DoesNotExist, e:
             return False
+
+
+class TimeRecord(Document):
+    date = db.DateTimeField(default=datetime.date.today(), required=True)
+    clock_in = db.DateTimeField(required=False)
+    clock_out = db.DateTimeField(required=False)
+    approved = db.BooleanField(default=False, required=True)
+    approved_by = db.StringField(max_length=255, required=False)

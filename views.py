@@ -4,7 +4,10 @@ import flask_login
 from auth import UserAwareView
 from auth import utils as auth_utils
 
+
+
 import forms
+import datetime
 
 
 class Home(UserAwareView):
@@ -47,7 +50,13 @@ class Login(UserAwareView):
 
 class Payroll(UserAwareView):
     def get(self):
-        import logging
-        logging.warning(self.user.username)
-        context = {'username': self.user.username}
+        import actions
+        records = actions.get_time_records(username='mike')
+        context = {'username': self.user.username, 'table_rows': records}
+        return render_template('payroll.html', **context)
+
+    def post(self):
+        import actions
+        records = actions.get_time_records(username='mike')
+        context = {'username': self.user.username, 'table_rows': records}
         return render_template('payroll.html', **context)

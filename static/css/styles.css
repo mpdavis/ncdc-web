@@ -59,3 +59,14 @@ body {
     padding: 7px 9px;
     width: 94%;
 }
+
+
+/* Payroll page */
+.user-info {
+    margin-bottom: 30px;
+}
+
+input.payroll-input {
+    width: 70px;
+    margin-bottom: 0px;
+}
