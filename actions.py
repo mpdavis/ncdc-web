@@ -9,5 +9,5 @@ def get_time_records(username, days=7):
     today = datetime.date.today()
     delta = datetime.timedelta(days=days)
     cutoff_date = today - delta
-    return auth_models.TimeRecord.objects(date__gt=cutoff_date)
+    return auth_models.TimeRecord.objects(date__gt=cutoff_date).order_by('date')
 

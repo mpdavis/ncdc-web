@@ -50,13 +50,51 @@ class Login(UserAwareView):
 
 class Payroll(UserAwareView):
     def get(self):
-        import actions
-        records = actions.get_time_records(username='mike')
+        from auth.models import TimeRecord
+        records = TimeRecord.get_current_week('mike')
         context = {'username': self.user.username, 'table_rows': records}
         return render_template('payroll.html', **context)
 
     def post(self):
-        import actions
-        records = actions.get_time_records(username='mike')
-        context = {'username': self.user.username, 'table_rows': records}
-        return render_template('payroll.html', **context)
+        from auth import models as auth_models
+        for input, value in request.form.iteritems():
+            if value:
+                punch_type, input_id = input.split('-')
+                current_record = auth_models.TimeRecord.objects(id=input_id).get()
+
+                try:
+                    time = datetime.datetime.strptime(value, '%I:%M %p')
+                    day = current_record.date
+                    timestamp = datetime.datetime.combine(day, time.time())
+                except ValueError, e:
+                    pass
+
+                if punch_type == 'clockin':
+                    current_record.clock_in = timestamp
+                else:
+                    current_record.clock_out = timestamp
+
+                if current_record.clock_in and current_record.clock_out:
+                    current_record.set_hours()
+
+                current_record.save()
+
+        return redirect(url_for('payroll'))
+
+
+class Approve(UserAwareView):
+    def post(self):
+        from auth.models import TimeRecord
+        if 'id' in request.form:
+            approve, id = request.form['id'].split('-')
+        if 'approver' in request.form:
+            approver = request.form['approver']
+        if not id or not approver:
+            return "error"
+
+        time_record = TimeRecord.objects(id=id).get()
+        time_record.approved = True
+        time_record.approved_by = approver
+        time_record.save()
+
+        return approver

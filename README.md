@@ -16,6 +16,10 @@ MongoDB is used as a backend datastore for the application.  MongoDB is availabl
     brew update
     brew install mongodb
 
+###Linux
+
+Most Linux package management systems have a package for MongoDB
+
 ##PIP Dependencies
 
 The rest of the dependencies can all be installed via pip.  A requirements.txt is provided for easy installation.

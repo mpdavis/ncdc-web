@@ -84,3 +84,11 @@ input.payroll-input {
     width: 70px;
     margin-bottom: 0px;
 }
+
+.table .centered-td {
+    text-align: center;
+}
+
+.alert-wrapper {
+    min-height: 60px;
+}
