@@ -1,13 +1,34 @@
-from flask import render_template, request, redirect, url_for
+import datetime
+
+from flask import render_template, request, redirect, url_for, session
+from flask.views import MethodView
 import flask_login
 
-from auth import UserAwareView
-from auth import utils as auth_utils
-
-
-
+import utils
 import forms
-import datetime
+
+
+class UserAwareView(MethodView):
+
+    @property
+    def session(self):
+        return session
+
+    @property
+    def user(self):
+        if not flask_login.current_user.is_anonymous():
+            return flask_login.current_user._get_current_object()
+        else:
+            return None
+
+    def get_context(self, extra_ctx=None, **kwargs):
+        ctx = {
+            'user': self.user,
+        }
+        if extra_ctx:
+            ctx.update(extra_ctx)
+        ctx.update(kwargs)
+        return ctx
 
 
 class Home(UserAwareView):
@@ -29,7 +50,7 @@ class Login(UserAwareView):
         return render_template('login.html', **context)
 
     def post(self):
-        from auth import models as auth_models
+        from models import User
 
         form = forms.LoginForm(request.form)
         authorized = False
@@ -39,8 +60,8 @@ class Login(UserAwareView):
         remember = form.remember_me.data
 
         if form.validate():
-            user = auth_models.User.get_user_by_username(username)
-            authorized = auth_utils.check_password(password, user)
+            user = User.get_user_by_username(username)
+            authorized = utils.check_password(password, user)
 
             if authorized:
                 flask_login.login_user(user, remember=remember)
@@ -50,17 +71,17 @@ class Login(UserAwareView):
 
 class Payroll(UserAwareView):
     def get(self):
-        from auth.models import TimeRecord
+        from models import TimeRecord
         records = TimeRecord.get_current_week('mike')
         context = {'user': self.user, 'table_rows': records}
         return render_template('payroll.html', **context)
 
     def post(self):
-        from auth import models as auth_models
+        from models import TimeRecord
         for input, value in request.form.iteritems():
             if value:
                 punch_type, input_id = input.split('-')
-                current_record = auth_models.TimeRecord.objects(id=input_id).get()
+                current_record = TimeRecord.objects(id=input_id).get()
 
                 try:
                     time = datetime.datetime.strptime(value, '%I:%M %p')
@@ -84,7 +105,7 @@ class Payroll(UserAwareView):
 
 class Approve(UserAwareView):
     def post(self):
-        from auth.models import TimeRecord
+        from models import TimeRecord
         if 'id' in request.form:
             approve, id = request.form['id'].split('-')
         if 'approver' in request.form:
@@ -102,7 +123,7 @@ class Approve(UserAwareView):
 
 class Admin(UserAwareView):
     def get(self):
-        from auth.models import User
+        from models import User
         users = User.objects()
         context = {'users' : users, 'current_user': self.user}
         return render_template('admin.html', **context)

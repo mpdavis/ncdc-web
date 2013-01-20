@@ -1,9 +1,11 @@
 import os
+import sys
 from flask import Flask, render_template, redirect, url_for
 from flask_mongoengine import MongoEngine
 from flask_debugtoolbar import DebugToolbarExtension
+from flask_login import LoginManager
 
-from auth import initialize as auth_init
+from utils import user_unauthorized_callback, load_user
 
 from urls import add_urls
 
@@ -12,14 +14,16 @@ app = Flask(__name__, static_folder=os.path.join(PROJECT_ROOT, 'static'), static
 app.config['MONGODB_DB'] = 'ncdc'
 app.config['SECRET_KEY'] = 'my_super_secret_key'
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.unauthorized_handler(user_unauthorized_callback)
+login_manager.user_loader(load_user)
+
 db = MongoEngine(app)
 
 app.debug = True
 #toolbar = DebugToolbarExtension(app)
-
-auth_init(app)
 add_urls(app)
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
