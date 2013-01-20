@@ -6,6 +6,7 @@ import flask_login
 
 import utils
 import forms
+from models import User, TimeRecord
 
 
 class UserAwareView(MethodView):
@@ -50,8 +51,6 @@ class Login(UserAwareView):
         return render_template('login.html', **context)
 
     def post(self):
-        from models import User
-
         form = forms.LoginForm(request.form)
         authorized = False
 
@@ -71,13 +70,11 @@ class Login(UserAwareView):
 
 class Payroll(UserAwareView):
     def get(self):
-        from models import TimeRecord
         records = TimeRecord.get_current_week('mike')
         context = {'user': self.user, 'table_rows': records}
         return render_template('payroll.html', **context)
 
     def post(self):
-        from models import TimeRecord
         for input, value in request.form.iteritems():
             if value:
                 punch_type, input_id = input.split('-')
@@ -105,7 +102,6 @@ class Payroll(UserAwareView):
 
 class Approve(UserAwareView):
     def post(self):
-        from models import TimeRecord
         if 'id' in request.form:
             approve, id = request.form['id'].split('-')
         if 'approver' in request.form:
@@ -123,7 +119,6 @@ class Approve(UserAwareView):
 
 class Admin(UserAwareView):
     def get(self):
-        from models import User
         users = User.objects()
         context = {'users' : users, 'current_user': self.user}
         return render_template('admin.html', **context)

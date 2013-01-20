@@ -2,15 +2,14 @@ import datetime
 
 from flask_mongoengine import Document
 from flask_mongoengine import DoesNotExist
-
-from app import db
+from mongoengine.fields import StringField, BooleanField, DateTimeField, FloatField
 
 
 class User(Document):
-    username = db.StringField(max_length=255, required=True)
-    password = db.StringField(max_length=255, required=True)
-    is_approver = db.BooleanField(default=False, required=False)
-    is_admin = db.BooleanField(default=False, required=False)
+    username = StringField(max_length=255, required=True)
+    password = StringField(max_length=255, required=True)
+    is_approver = BooleanField(default=False, required=False)
+    is_admin = BooleanField(default=False, required=False)
 
     def is_authenticated(self):
         return True
@@ -34,13 +33,13 @@ class User(Document):
 
 
 class TimeRecord(Document):
-    username = db.StringField(default=None, required=True)
-    date = db.DateTimeField(default=datetime.date.today(), required=True)
-    clock_in = db.DateTimeField(required=False)
-    clock_out = db.DateTimeField(required=False)
-    approved = db.BooleanField(default=False, required=True)
-    approved_by = db.StringField(max_length=255, required=False)
-    hours = db.FloatField()
+    username = StringField(default=None, required=True)
+    date = DateTimeField(default=datetime.date.today(), required=True)
+    clock_in = DateTimeField(required=False)
+    clock_out = DateTimeField(required=False)
+    approved = BooleanField(default=False, required=True)
+    approved_by = StringField(max_length=255, required=False)
+    hours = FloatField()
 
     def set_hours(self):
         if not self.clock_in or not self.clock_out:
