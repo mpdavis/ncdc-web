@@ -52,7 +52,7 @@ class Payroll(UserAwareView):
     def get(self):
         from auth.models import TimeRecord
         records = TimeRecord.get_current_week('mike')
-        context = {'username': self.user.username, 'table_rows': records}
+        context = {'user': self.user, 'table_rows': records}
         return render_template('payroll.html', **context)
 
     def post(self):
@@ -98,3 +98,11 @@ class Approve(UserAwareView):
         time_record.save()
 
         return approver
+
+
+class Admin(UserAwareView):
+    def get(self):
+        from auth.models import User
+        users = User.objects()
+        context = {'users' : users, 'current_user': self.user}
+        return render_template('admin.html', **context)
