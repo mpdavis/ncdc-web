@@ -93,6 +93,17 @@ input.payroll-input {
     min-height: 60px;
 }
 
+.payroll-paginator {
+    margin-left: 48px;
+    padding-bottom: 10px;
+}
+
+.payroll-paginator .boundaries {
+    width: 560px;
+    display: inline-block;
+    text-align: center;
+}
+
 
 /* Admin Page */
 #add-user-button {

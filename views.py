@@ -1,4 +1,5 @@
 import datetime
+import time
 import logging
 
 from flask import render_template, request, redirect, url_for, session, abort
@@ -70,14 +71,28 @@ class Login(UserAwareView):
 
 
 class Payroll(UserAwareView):
-    def get(self, payroll_user=None):
-        records = TimeRecord.get_current_week(payroll_user or self.user.username)
+    def get(self, payroll_user=None, week=None):
+        start_date = utils.get_last_monday(datetime.date.today())
+        end_date = start_date + datetime.timedelta(days=6)
+        if week:
+            start_date = utils.get_last_monday(datetime.date.fromtimestamp(float(week)))
+            end_date = start_date + datetime.timedelta(days=6)
+            records = TimeRecord.get_current_week(payroll_user or self.user.username, start_date)
+        else:
+            records = TimeRecord.get_current_week(payroll_user or self.user.username)
         if not records:
             return abort(404)
+
+        next_date = start_date + datetime.timedelta(days=7)
+        prev_date = start_date - datetime.timedelta(days=7)
         context = {
             'user': self.user,
             'table_rows': records,
-            'payroll_user': payroll_user or self.user
+            'payroll_username': payroll_user or self.user.username,
+            'start_date': start_date,
+            'end_date': end_date,
+            'prev_timestamp': time.mktime(prev_date.timetuple()),
+            'next_timestamp': time.mktime(next_date.timetuple()),
         }
         return render_template('payroll.html', **context)
 

@@ -12,6 +12,15 @@
         </div>
     </div>
 
+    <div class="payroll-paginator">
+        <a href="{{ url_for('payroll', payroll_user=payroll_username, week=prev_timestamp) }}" class="icon-arrow-left"></a>
+        <div class="boundaries">
+            {{ start_date.strftime("%A, %B %d") }} &nbsp; - &nbsp;
+            {{ end_date.strftime("%A, %B %d") }}
+        </div>
+        <a href="{{ url_for('payroll', payroll_user=payroll_username, week=next_timestamp) }}" class="icon-arrow-right"></a>
+    </div>
+
     <form class="payroll-form" id="payroll-form" method="post">
         <table class="table table-bordered table-striped">
             <thead>
