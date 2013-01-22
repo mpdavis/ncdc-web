@@ -8,3 +8,4 @@ def add_urls(app):
     app.add_url_rule('/payroll/', view_func=views.Payroll.as_view('payroll'))
     app.add_url_rule('/approve/', view_func=views.Approve.as_view('approve'))
     app.add_url_rule('/admin/', view_func=views.Admin.as_view('admin'))
+    app.add_url_rule('/add_user/', view_func=views.AddUser.as_view('add_user'))

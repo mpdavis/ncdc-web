@@ -92,3 +92,13 @@ input.payroll-input {
 .alert-wrapper {
     min-height: 60px;
 }
+
+
+/* Admin Page */
+#add-user-button {
+    margin-bottom: 10px;;
+}
+
+.table-buttons {
+    min-height: 40px;
+}

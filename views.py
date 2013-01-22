@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from flask import render_template, request, redirect, url_for, session
 from flask.views import MethodView
@@ -120,5 +121,30 @@ class Approve(UserAwareView):
 class Admin(UserAwareView):
     def get(self):
         users = User.objects()
-        context = {'users' : users, 'current_user': self.user}
+        add_user_form = forms.AddUser()
+        context = {'users' : users, 'current_user': self.user, 'form': add_user_form}
         return render_template('admin.html', **context)
+
+
+class AddUser(UserAwareView):
+    def post(self):
+        form = forms.AddUser(request.form)
+        if form.validate():
+            username = form.username.data
+            password = form.password.data
+            is_admin = form.is_admin.data
+            is_approver = form.is_approver.data
+
+            User(username=username,
+                 password=password,
+                 is_admin=is_admin,
+                 is_approver=is_approver).save()
+
+            data = {
+                'username': username,
+                'is_admin': is_admin,
+                'is_approver': is_approver
+            }
+
+            return render_template('admin_user_row.html', **data)
+        return

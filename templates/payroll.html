@@ -54,7 +54,7 @@
             $('.btn-approve').click(function() {
                 button = $(this)
                 success_alert = $('#success')
-                $.post("{{ url_for('approve') }}", {'id': $(this).attr('id'), 'approver': "{{ username }}"},
+                $.post("{{ url_for('approve') }}", {'id': $(this).attr('id'), 'approver': "{{ user.username }}"},
                     function(responseData) {
                         clearTimeout(timeout)
                         if (responseData) {

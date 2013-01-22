@@ -2,9 +2,9 @@
 
 {% block main %}
 
-    <div class="user-info">
-        Logged in as: {{ current_user.username }}
-    </div>
+{#    <div class="user-info">#}
+{#        Logged in as: {{ current_user.username }}#}
+{#    </div>#}
 
     <div class="alert-wrapper">
         <div id="success" class="alert alert-success hide">
@@ -12,29 +12,76 @@
         </div>
     </div>
 
-    <form class="admin-form" id="admin-form" method="post">
-        <table class="table table-bordered table-striped">
-            <thead>
-            <tr>
-                <th>User</th>
-                <th>Approver</th>
-                <th>Admin</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% if users %}
-                {% for user in users %}
-                    <tr>
-                        <td>{{ user.username }}</td>
-                        <td>{{ user.is_approver }}</td>
-                        <td>{{ user.is_admin }}</td>
-                    </tr>
-                {% endfor %}
-            {% endif %}
-            </tbody>
-        </table>
-        <input type="submit" value="Submit" class="btn btn-primary btn-large pull-right">
-    </form>
+    <div class="table-buttons">
+        <a href="#addUserModal" role="button" id="add-user-button" class="btn btn-primary pull-right" data-toggle="modal">Add User</a>
+    </div>
+
+
+    <div id="addUserModal" class="modal hide fade" tabindex="-1" role="dialog">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">×</button>
+            <h3 id="myModalLabel">Add a User</h3>
+        </div>
+        <div class="modal-body">
+            <form class="add-user-form form-horizontal" id="add-user-form" data-async data-target="#" action="/add_user/" method="post">
+                <div class="control-group">
+                    <label class="control-label">Username</label>
+                    <div class="controls">
+                        {{ form.username }}
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Password</label>
+                    <div class="controls">
+                        {{ form.password }}
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="controls">
+                        <label class="checkbox">
+                            {{ form.is_admin }} Administrator
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <div class="controls">
+                        <label class="checkbox">
+                            {{ form.is_approver }} Approver
+                        </label>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+            <button id="add-user-submit" class="btn btn-primary">Add User</button>
+        </div>
+    </div>
+
+    <table id="admin-table" class="table table-bordered table-striped">
+        <thead>
+        <tr>
+            <th>User</th>
+            <th>Approver</th>
+            <th>Admin</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if users %}
+            {% for user in users %}
+                <tr>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.is_approver }}</td>
+                    <td>{{ user.is_admin }}</td>
+                </tr>
+            {% endfor %}
+        {% endif %}
+        </tbody>
+    </table>
 
 {% endblock %}
 
@@ -42,22 +89,28 @@
 
     <script>
         $(document).ready(function() {
-            var button;
-            var timeout;
-            var success_alert;
-            $('.btn-approve').click(function() {
-                button = $(this)
-                success_alert = $('#success')
-                $.post("{{ url_for('approve') }}", {'id': $(this).attr('id'), 'approver': "{{ username }}"},
-                        function(responseData) {
-                            clearTimeout(timeout)
-                            if (responseData) {
-                                success_alert.html('Time record approved by ' + responseData)
-                                button.parent().html(responseData)
-                            }
-                            $('#success').fadeIn();
-                            timeout = setTimeout(function() {$('#success').fadeOut()}, 3000);
-                        });
+
+            $(document).on('click', '#add-user-submit', function() {
+                var $form = $('#add-user-form');
+                var $target = $($form.attr('data-target'));
+
+                $.ajax({
+                    type: $form.attr('method'),
+                    url: $form.attr('action'),
+                    data: $form.serialize(),
+
+                    success: function(data, status) {
+                        $('#admin-table > tbody').append(data)
+                    }
+                });
+
+                $('#addUserModal').modal('hide')
+                $('#addUserModal input').val('');
+                $('#addUserModal input').attr('checked', false);
+
+                $('#success').html('New user added successfully.')
+                $('#success').fadeIn();
+                timeout = setTimeout(function() {$('#success').fadeOut()}, 3000);
             });
         });
 
