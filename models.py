@@ -51,6 +51,12 @@ class TimeRecord(Document):
 
     @classmethod
     def get_current_week(cls, username):
+
+        try:
+            user = User.objects(username=username).get()
+        except DoesNotExist, e:
+            return
+
         today = datetime.date.today()
         offset = today.weekday() % 7
         last_monday = today - datetime.timedelta(days=offset)

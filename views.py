@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from flask import render_template, request, redirect, url_for, session
+from flask import render_template, request, redirect, url_for, session, abort
 from flask.views import MethodView
 import flask_login
 
@@ -70,9 +70,15 @@ class Login(UserAwareView):
 
 
 class Payroll(UserAwareView):
-    def get(self):
-        records = TimeRecord.get_current_week('mike')
-        context = {'user': self.user, 'table_rows': records}
+    def get(self, payroll_user=None):
+        records = TimeRecord.get_current_week(payroll_user or self.user.username)
+        if not records:
+            return abort(404)
+        context = {
+            'user': self.user,
+            'table_rows': records,
+            'payroll_user': payroll_user or self.user
+        }
         return render_template('payroll.html', **context)
 
     def post(self):
