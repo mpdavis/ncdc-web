@@ -1,5 +1,7 @@
 import datetime
 
+import utils
+
 from flask_mongoengine import Document
 from flask_mongoengine import DoesNotExist
 from mongoengine.fields import StringField, BooleanField, DateTimeField, FloatField
@@ -50,17 +52,18 @@ class TimeRecord(Document):
         return self.hours
 
     @classmethod
-    def get_current_week(cls, username):
+    def get_current_week(cls, username, today=datetime.date.today()):
 
         try:
             user = User.objects(username=username).get()
         except DoesNotExist, e:
             return
 
-        today = datetime.date.today()
-        offset = today.weekday() % 7
-        last_monday = today - datetime.timedelta(days=offset)
-        records = TimeRecord.objects(date__gte=last_monday, username=username).order_by('date')
+        last_monday = utils.get_last_monday(today)
+        next_monday = last_monday + datetime.timedelta(days=7)
+        records = TimeRecord.objects(date__gte=last_monday,
+                                     date__lt=next_monday,
+                                     username=username).order_by('date')
         if len(records) < 7:
             for day in xrange(7):
                 date = last_monday + datetime.timedelta(days=day)
@@ -68,5 +71,7 @@ class TimeRecord(Document):
                     record = TimeRecord.objects(date=date, username=username).get()
                 except DoesNotExist, e:
                     TimeRecord(date=date, username=username).save()
-            records = TimeRecord.objects(date__gte=last_monday, username=username).order_by('date')
+            records = TimeRecord.objects(date__gte=last_monday,
+                                         date__lt=next_monday,
+                                         username=username).order_by('date')
         return records
