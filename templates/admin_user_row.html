@@ -1,5 +1,7 @@
-<tr>
-    <td>{{ username }}</td>
-    <td>{{ is_admin }}</td>
-    <td>{{ is_approver }}</td>
-</tr>
+<td>{{ user.username }}</td>
+<td id="edit-{{ user.username }}-approver">{{ user.is_approver }}</td>
+<td id="edit-{{ user.username }}-admin">{{ user.is_admin }}</td>
+<td style="width: 157px;">
+    <button id="edit-{{ user.username }}" class="btn btn-inverse edit-button"><i class="icon-edit icon-white"></i> Edit</button>
+    <button href="#deleteUserModal" id="delete-{{ user.username }}" class="btn btn-danger delete-button" data-toggle="modal"><i class="icon-remove icon-white"></i> Delete</button>
+</td>

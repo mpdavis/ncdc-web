@@ -49,7 +49,10 @@ class About(UserAwareView):
 class Login(UserAwareView):
     def get(self):
         form = forms.LoginForm()
-        context = {'form': form, 'nav': 'login'}
+        context = {
+            'form': form,
+            'nav': 'login'
+        }
         return render_template('login.html', **context)
 
     def post(self):
@@ -86,6 +89,7 @@ class Payroll(UserAwareView):
         next_date = start_date + datetime.timedelta(days=7)
         prev_date = start_date - datetime.timedelta(days=7)
         context = {
+            'nav':  'payroll',
             'user': self.user,
             'table_rows': records,
             'payroll_username': payroll_user or self.user.username,
@@ -124,6 +128,8 @@ class Payroll(UserAwareView):
 
 class Approve(UserAwareView):
     def post(self):
+        id = None
+        approver = None
         if 'id' in request.form:
             approve, id = request.form['id'].split('-')
         if 'approver' in request.form:
@@ -143,8 +149,31 @@ class Admin(UserAwareView):
     def get(self):
         users = User.objects()
         add_user_form = forms.AddUser()
-        context = {'users' : users, 'current_user': self.user, 'form': add_user_form}
+        context = {
+            'nav': 'admin',
+            'users': users,
+            'user': self.user,
+            'form': add_user_form,
+        }
         return render_template('admin.html', **context)
+
+    def post(self):
+        if not 'username' in request.form:
+            return 'error'
+
+        user = User.get_user_by_username(request.form['username'])
+        for key, value in request.form.items():
+            if hasattr(user, key):
+                if value == 'true':
+                    value = True
+                elif value == 'false':
+                    value = False
+                setattr(user, key, value)
+            user.save()
+
+        data = {'user': user}
+
+        return render_template('admin_user_row.html', **data)
 
 
 class AddUser(UserAwareView):
@@ -156,16 +185,28 @@ class AddUser(UserAwareView):
             is_admin = form.is_admin.data
             is_approver = form.is_approver.data
 
-            User(username=username,
+            user = User(username=username,
                  password=password,
                  is_admin=is_admin,
                  is_approver=is_approver).save()
 
-            data = {
-                'username': username,
-                'is_admin': is_admin,
-                'is_approver': is_approver
-            }
+            data = {'user': user}
 
             return render_template('admin_user_row.html', **data)
-        return
+        return 'error'
+
+
+class DeleteUser(UserAwareView):
+    def post(self):
+        username = None
+        operator = None
+        logging.warning(request.form)
+        if 'username' in request.form:
+            username = request.form['username']
+        if 'operator' in request.form:
+            operator = request.form['operator']
+        if not username or not operator:
+            return 'error'
+
+        deleted = User.delete_user(username)
+        return "done"

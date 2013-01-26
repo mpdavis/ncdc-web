@@ -2,10 +2,6 @@
 
 {% block main %}
 
-{#    <div class="user-info">#}
-{#        Logged in as: {{ current_user.username }}#}
-{#    </div>#}
-
     <div class="alert-wrapper">
         <div id="success" class="alert alert-success hide">
             Something
@@ -16,7 +12,35 @@
         <a href="#addUserModal" role="button" id="add-user-button" class="btn btn-primary pull-right" data-toggle="modal">Add User</a>
     </div>
 
+    <table id="admin-table" class="table table-bordered table-striped">
+        <thead>
+        <tr>
+            <th>User</th>
+            <th>Approver</th>
+            <th>Admin</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if users %}
+            {% for user in users %}
+                <tr id="row-{{ user.username }}">
+                    <td>{{ user.username }}</td>
+                    <td id="edit-{{ user.username }}-approver">{{ user.is_approver }}</td>
+                    <td id="edit-{{ user.username }}-admin">{{ user.is_admin }}</td>
+                    <td style="width: 157px;">
+                        <button id="edit-{{ user.username }}" class="btn btn-inverse edit-button"><i class="icon-edit icon-white"></i> Edit</button>
+                        <button href="#deleteUserModal" id="delete-{{ user.username }}" class="btn btn-danger delete-button" data-toggle="modal"><i class="icon-remove icon-white"></i> Delete</button>
+                    </td>
+                </tr>
+            {% endfor %}
+        {% endif %}
+        </tbody>
+    </table>
 
+    {# Modal Dialogs #}
+
+    {# Add User Modal #}
     <div id="addUserModal" class="modal hide fade" tabindex="-1" role="dialog">
         <div class="modal-header">
             <button type="button" class="close" data-dismiss="modal">×</button>
@@ -55,33 +79,28 @@
                 </div>
             </form>
         </div>
-
         <div class="modal-footer">
             <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
             <button id="add-user-submit" class="btn btn-primary">Add User</button>
         </div>
     </div>
 
-    <table id="admin-table" class="table table-bordered table-striped">
-        <thead>
-        <tr>
-            <th>User</th>
-            <th>Approver</th>
-            <th>Admin</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% if users %}
-            {% for user in users %}
-                <tr>
-                    <td>{{ user.username }}</td>
-                    <td>{{ user.is_approver }}</td>
-                    <td>{{ user.is_admin }}</td>
-                </tr>
-            {% endfor %}
-        {% endif %}
-        </tbody>
-    </table>
+    {# Delete User Modal #}
+    <div id="deleteUserModal" class="modal hide fade" tabindex="-1" role="dialog">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">×</button>
+            <h3 id="deleteUserModalLabel">Delete a User</h3>
+        </div>
+        <div class="modal-body">
+            Are you sure you want to delete <span id="delete-username">None</span>?<br><br>
+            This will delete all data for that user and it is not reversible.
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+            <button id="delete-user-submit" class="btn btn-primary">Delete User</button>
+        </div>
+    </div>
 
 {% endblock %}
 
@@ -89,10 +108,57 @@
 
     <script>
         $(document).ready(function() {
+            var timeout;
+
+            $(document).on('click', '.delete-button', function(event) {
+                var split_name = event.target.id.split("-");
+                $('#delete-username').html(split_name[1]);
+            })
+
+            $(document).on('click', '.edit-button', function(event) {
+                var split_name = event.target.id.split("-");
+                var target_id = event.target.id
+                $("#" + target_id + "-approver").html("<input id='save-" + split_name[1] + "-approver' type='checkbox'>")
+                $("#" + target_id + "-admin").html("<input id='save-" + split_name[1] + "-admin' type='checkbox'>")
+                $("#" + target_id).parent().html("<button id='save-" + split_name[1] + "' class='btn btn-success save-button'><i class='icon-edit icon-white'></i> Save</button>")
+            });
+
+            $(document).on('click', '.save-button', function(event) {
+                var split_name = event.target.id.split("-");
+                var target_id = event.target.id;
+                var is_approver = $("#" + target_id + "-approver").is(':checked')
+                var is_admin = $("#" + target_id + "-admin").is(':checked')
+                var $success = $('#success')
+                var $user_row = $('#row-' + split_name[1])
+
+                console.log($user_row)
+
+                $.ajax({
+                    type: 'post',
+                    url: "{{ url_for('admin') }}",
+                    data: {
+                        'is_approver': is_approver,
+                        'is_admin': is_admin,
+                        'username': split_name[1]
+                    },
+
+                    success: function(data, status) {
+                        $user_row.html(data)
+                        $success.html(split_name[1] + ' edited successfully.')
+                        $success.fadeIn();
+                        timeout = setTimeout(function() { $success.fadeOut() }, 3000);
+                    }
+                })
+
+            });
 
             $(document).on('click', '#add-user-submit', function() {
                 var $form = $('#add-user-form');
                 var $target = $($form.attr('data-target'));
+                var $table_tbody = $('#admin-table > tbody');
+                var $addModal = $('#addUserModal');
+                var $addModal_inputs = $('#addUserModal input');
+                var $success = $('#success');
 
                 $.ajax({
                     type: $form.attr('method'),
@@ -100,18 +166,38 @@
                     data: $form.serialize(),
 
                     success: function(data, status) {
-                        $('#admin-table > tbody').append(data)
+                        $table_tbody.append('<tr id="row-' + $('#username').val() + '">' + data + '</tr>')
+                        $addModal.modal('hide')
+                        $addModal_inputs.val('');
+                        $addModal_inputs.attr('checked', false);
+                        $success.html('New user added successfully.').fadeIn();
+                        $success.fadeIn();
+                        timeout = setTimeout(function() { $success.fadeOut() }, 3000);
                     }
                 });
 
-                $('#addUserModal').modal('hide')
-                $('#addUserModal input').val('');
-                $('#addUserModal input').attr('checked', false);
-
-                $('#success').html('New user added successfully.')
-                $('#success').fadeIn();
-                timeout = setTimeout(function() {$('#success').fadeOut()}, 3000);
             });
+
+            $(document).on('click', '#delete-user-submit', function() {
+                var $modal_obj = $('#deleteUserModal');
+                var $success = $('#success');
+                var username = $('#delete-username').html();
+                var timeout
+
+                $.ajax({
+                    type: 'post',
+                    url: "{{ url_for('delete_user') }}",
+                    data: {'username': username, 'operator': "{{ user.username }}" },
+
+                    success: function(data, status) {
+                        $modal_obj.modal('hide')
+                        $success.html(username + " successfully deleted.")
+                        $success.fadeIn();
+                        timeout = setTimeout(function() {$success.fadeOut()}, 3000);
+                    }
+                });
+            });
+
         });
 
     </script>

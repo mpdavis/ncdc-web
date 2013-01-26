@@ -15,9 +15,20 @@
 
                 <div class="masthead">
                     <ul class="nav nav-pills pull-right">
+                    {% if not user %}
                         <li{% if nav == "home" %} class="active"{% endif %}><a href="{{ url_for('home') }}">Home</a></li>
                         <li{% if nav == "about" %} class="active"{% endif %}><a href="{{ url_for('about') }}">About</a></li>
                         <li{% if nav == "login" %} class="active"{% endif %}><a href="{{ url_for('login') }}">Login</a></li>
+                    {% else %}
+                        {% if user.is_admin %}
+                            <li{% if nav == "admin" %} class="active"{% endif %}><a href="{{ url_for('admin') }}">Admin</a></li>
+                        {% endif %}
+                        {% if user.is_approver %}
+                            <li{% if nav == "approve" %} class="active"{% endif %}><a href="{{ url_for('approve') }}">Approve</a></li>
+                        {% endif %}
+                        <li{% if nav == "payroll" %} class="active"{% endif %}><a href="{{ url_for('payroll') }}">Payroll</a></li>
+                        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                    {% endif %}
                     </ul>
                     <h3 class="muted">Cyclone Development Company</h3>
                 </div>

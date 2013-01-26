@@ -42,7 +42,7 @@
                         <td><input type="text" id="clockin-{{ row.id }}" name="clockin-{{ row.id }}" value="{% if row.clock_in %}{{ row.clock_in.strftime('%I:%M %p') }}{% endif %}" class="payroll-input"></td>
                         <td><input type="text" id="clockout-{{ row.id }}" name="clockout-{{ row.id }}" value="{% if row.clock_out %}{{ row.clock_out.strftime('%I:%M %p') }}{% endif %}" class="payroll-input"></td>
                         <td>{% if row.hours %}{{ '%0.2f' % row.hours }}{% endif %}</td>
-                        <td class="centered-td">{% if row.approved %}{{ row.approved_by or '' }} {% elif user.is_approver %} <button class="btn btn-success btn-approve" id="approve-{{ row.id }}" type="button"><i class="icon-ok icon-white"></i> Approve</button>{% endif %}</td>
+                        <td class="centered-td">{% if row.approved %}{{ row.approved_by or '' }} {% elif user.is_approver %} <button class="btn btn-success btn-approve {% if not row.clock_in or not row.clock_out %}disabled{% endif %}" id="approve-{{ row.id }}" type="button"><i class="icon-ok icon-white"></i> Approve</button>{% endif %}</td>
                     </tr>
                 {% endfor %}
             {% endif %}

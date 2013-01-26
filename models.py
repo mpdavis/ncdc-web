@@ -4,6 +4,7 @@ import utils
 
 from flask_mongoengine import Document
 from flask_mongoengine import DoesNotExist
+from flask_mongoengine import MultipleObjectsReturned
 from mongoengine.fields import StringField, BooleanField, DateTimeField, FloatField
 
 
@@ -32,6 +33,21 @@ class User(Document):
             return user
         except DoesNotExist, e:
             return False
+
+    @classmethod
+    def delete_user(cls, username):
+        try:
+            user = User.objects(username=username).get()
+            user.delete()
+            return True
+        except DoesNotExist, e:
+            return False
+        except MultipleObjectsReturned, e:
+            # There were multiple users made with the same username.
+            # Usernames should be unique, so just delete them all.
+            for user in User.objects(username=username):
+                user.delete()
+            return True
 
 
 class TimeRecord(Document):
