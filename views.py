@@ -1,10 +1,13 @@
 import datetime
 import time
 import logging
+import json
 
 from flask import render_template, request, redirect, url_for, session, abort
+
 from flask.views import MethodView
 import flask_login
+from flask_login import login_required
 
 import utils
 import forms
@@ -12,19 +15,35 @@ from models import User, TimeRecord
 
 
 class UserAwareView(MethodView):
+    """
+    A base view class to extend.
+    """
 
     @property
     def session(self):
+        """
+        Adds the session property to the view.
+        """
         return session
 
     @property
     def user(self):
+        """
+        Adds the user property to the view.
+
+        :returns: The currently logged in user if one exists, else None
+        """
         if not flask_login.current_user.is_anonymous():
             return flask_login.current_user._get_current_object()
         else:
             return None
 
     def get_context(self, extra_ctx=None, **kwargs):
+        """
+        Adds a helper function to the view to get the context.
+
+        :returns: The current context with the user set.
+        """
         ctx = {
             'user': self.user,
         }
@@ -35,24 +54,33 @@ class UserAwareView(MethodView):
 
 
 class Home(UserAwareView):
+    """
+    The view for the home page.
+    """
     def get(self):
-        context = {'nav': 'home'}
+        context = self.get_context()
+        context['nav'] = 'home'
         return render_template('index.html', **context)
 
 
 class About(UserAwareView):
+    """
+    The view for the about page.
+    """
     def get(self):
-        context = {'nav': 'about'}
+        context = self.get_context()
+        context['nav'] = 'about'
         return render_template('about.html', **context)
 
 
 class Login(UserAwareView):
+    """
+    The view for the login page.
+    """
     def get(self):
-        form = forms.LoginForm()
-        context = {
-            'form': form,
-            'nav': 'login'
-        }
+        context = self.get_context()
+        context['nav'] = 'login'
+        context['form'] = forms.LoginForm()
         return render_template('login.html', **context)
 
     def post(self):
@@ -73,7 +101,21 @@ class Login(UserAwareView):
         return redirect(url_for('payroll'))
 
 
+class Logout(UserAwareView):
+    """
+    The view for the logout page.
+    """
+    decorators = [login_required]
+
+    def get(self):
+        flask_login.logout_user()
+        return redirect(url_for('login'))
+
+
 class Payroll(UserAwareView):
+    """
+    The view for the payroll page.
+    """
     def get(self, payroll_user=None, week=None):
         start_date = utils.get_last_monday(datetime.date.today())
         end_date = start_date + datetime.timedelta(days=6)
@@ -127,6 +169,21 @@ class Payroll(UserAwareView):
 
 
 class Approve(UserAwareView):
+    """
+    The view for the approve page.
+    """
+    def get(self):
+        context = {
+            'nav': 'approve',
+            'user': self.user
+        }
+
+        records = TimeRecord.get_unapproved_records()
+
+        context['records'] = records
+
+        return render_template('approve.html', **context)
+
     def post(self):
         id = None
         approver = None
@@ -146,6 +203,9 @@ class Approve(UserAwareView):
 
 
 class Admin(UserAwareView):
+    """
+    The view for the admin page.
+    """
     def get(self):
         users = User.objects()
         add_user_form = forms.AddUser()
@@ -177,6 +237,9 @@ class Admin(UserAwareView):
 
 
 class AddUser(UserAwareView):
+    """
+    The AJAX endpoint for adding a user to the system.
+    """
     def post(self):
         form = forms.AddUser(request.form)
         if form.validate():
@@ -197,6 +260,9 @@ class AddUser(UserAwareView):
 
 
 class DeleteUser(UserAwareView):
+    """
+    The AJAX endpoint for deleting a user from the system.
+    """
     def post(self):
         username = None
         operator = None
@@ -210,3 +276,34 @@ class DeleteUser(UserAwareView):
 
         deleted = User.delete_user(username)
         return "done"
+
+
+class GetInfo(MethodView):
+    """
+    The REST API endpoint for getting payroll info about a user.
+    """
+    def get(self, username):
+        user = User.get_user_by_username(username)
+        if not user:
+            abort(404)
+
+        records = TimeRecord.get_approved_records_by_username(username)
+        record_list = []
+        for record in records:
+            record_list.append({
+                'date': record.date.strftime('%B %d'),
+                'clock-in': record.clock_in.strftime('%I:%M %p'),
+                'clock-out': record.clock_out.strftime('%I:%M %p'),
+                'approved': record.approved,
+                'approved-by': record.approved_by
+            })
+
+        response = {
+            'username': user.username,
+            'ssn': user.ssn,
+            'wage': user.wage,
+            'records': record_list
+        }
+
+        return json.dumps(response)
+

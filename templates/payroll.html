@@ -2,15 +2,20 @@
 
 {% block main %}
 
-    <div class="user-info">
-        Logged in as: {{ user.username }}
-    </div>
-
     <div class="alert-wrapper">
         <div id="success" class="alert alert-success hide">
             Something
         </div>
     </div>
+
+    <div class="row">
+{#        <div class="span12">#}
+            <div style="text-align: center">
+                <a href="{{ url_for('payroll') }}">Current Week</a>
+            </div>
+{#        </div>#}
+    </div>
+
 
     <div class="payroll-paginator">
         <a href="{{ url_for('payroll', payroll_user=payroll_username, week=prev_timestamp) }}" class="icon-arrow-left"></a>
@@ -48,7 +53,7 @@
             {% endif %}
             </tbody>
         </table>
-        <input type="submit" value="Submit" class="btn btn-primary btn-large pull-right">
+        <input type="submit" value="Save" class="btn btn-primary btn-large pull-right">
     </form>
 
 {% endblock %}

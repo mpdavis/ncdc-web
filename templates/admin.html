@@ -4,7 +4,7 @@
 
     <div class="alert-wrapper">
         <div id="success" class="alert alert-success hide">
-            Something
+
         </div>
     </div>
 
@@ -59,6 +59,20 @@
                     <label class="control-label">Password</label>
                     <div class="controls">
                         {{ form.password }}
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">SSN</label>
+                    <div class="controls">
+                        {{ form.ssn }}
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Wage</label>
+                    <div class="controls">
+                        {{ form.wage }}
                     </div>
                 </div>
 
@@ -118,8 +132,20 @@
             $(document).on('click', '.edit-button', function(event) {
                 var split_name = event.target.id.split("-");
                 var target_id = event.target.id
+                var is_approver_text = $('#' + target_id + "-approver").html()
+                var is_admin_text = $('#' + target_id + "-admin").html()
+
                 $("#" + target_id + "-approver").html("<input id='save-" + split_name[1] + "-approver' type='checkbox'>")
                 $("#" + target_id + "-admin").html("<input id='save-" + split_name[1] + "-admin' type='checkbox'>")
+
+                if (is_approver_text == 'True') {
+                    $('#save-' + split_name[1] + "-approver").prop('checked', true)
+                }
+
+                if (is_admin_text == 'True') {
+                    $('#save-' + split_name[1] + "-admin").prop('checked', true)
+                }
+
                 $("#" + target_id).parent().html("<button id='save-" + split_name[1] + "' class='btn btn-success save-button'><i class='icon-edit icon-white'></i> Save</button>")
             });
 
@@ -194,6 +220,7 @@
                         $success.html(username + " successfully deleted.")
                         $success.fadeIn();
                         timeout = setTimeout(function() {$success.fadeOut()}, 3000);
+                        $('#row-' + username).remove();
                     }
                 });
             });
