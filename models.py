@@ -143,16 +143,25 @@ class TimeRecord(Document):
         return records
 
     @classmethod
-    def get_approved_records_by_username(cls, username):
+    def get_approved_records_by_username(cls, username, num_days=None):
         """
         Gets a list of approved TimeRecords for a user.
 
         :param username: The user to lookup.
+        :param num_days: An optional number of days to filter by.
         "returns: A list of all of the approved TimeRecords for that user.
         """
+        if not num_days:
+            return TimeRecord.objects(username=username,
+                                      clock_in__exists=True,
+                                      clock_out__exists=True,
+                                      approved_by__exists=True)
+
+        start_date = datetime.date.today() - datetime.timedelta(days=num_days)
         return TimeRecord.objects(username=username,
                                   clock_in__exists=True,
                                   clock_out__exists=True,
+                                  date__gte=start_date,
                                   approved_by__exists=True)
 
     @classmethod

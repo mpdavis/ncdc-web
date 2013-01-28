@@ -283,11 +283,13 @@ class GetInfo(MethodView):
     The REST API endpoint for getting payroll info about a user.
     """
     def get(self, username):
+        days = int(request.args.get('days', 14))
+
         user = User.get_user_by_username(username)
         if not user:
             abort(404)
 
-        records = TimeRecord.get_approved_records_by_username(username)
+        records = TimeRecord.get_approved_records_by_username(username, num_days=days)
         record_list = []
         for record in records:
             record_list.append({
