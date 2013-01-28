@@ -307,3 +307,13 @@ class GetInfo(MethodView):
 
         return json.dumps(response)
 
+
+class GetUsers(MethodView):
+    """
+    The REST API endpoint for getting a list of users.
+    """
+    def get(self):
+        users = User.objects()
+        user_list = [user.username for user in users]
+        return json.dumps({'users': user_list})
+
