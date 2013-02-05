@@ -9,6 +9,8 @@ from flask.views import MethodView
 import flask_login
 from flask_login import login_required
 
+from settings import API_SERVER
+
 import utils
 import forms
 from models import User, TimeRecord
@@ -214,6 +216,7 @@ class Admin(UserAwareView):
             'users': users,
             'user': self.user,
             'form': add_user_form,
+            'api_server': API_SERVER
         }
         return render_template('admin.html', **context)
 
@@ -231,7 +234,10 @@ class Admin(UserAwareView):
                 setattr(user, key, value)
             user.save()
 
-        data = {'user': user}
+        data = {
+            'user': user,
+            'api_server': API_SERVER
+        }
 
         return render_template('admin_user_row.html', **data)
 
