@@ -19,19 +19,6 @@ def load_user(username):
     from models import User
     return User.objects.get_or_404(username=username)
 
-
-def check_password(raw_password, user):
-    """
-    Helper method for checking the password of the user.
-
-    :param raw_password: The password to verify against the user object.
-    :param user: The User object to verify the password against.
-    """
-    if user:
-        return raw_password == user.password
-    return False
-
-
 def get_last_monday(today):
     """
     Helper method for determining the monday immediately prior to a given day.

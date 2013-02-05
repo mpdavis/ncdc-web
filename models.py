@@ -2,9 +2,9 @@ import datetime
 
 import utils
 
-from flask_mongoengine import Document
-from flask_mongoengine import DoesNotExist
-from flask_mongoengine import MultipleObjectsReturned
+from flask.ext.mongoengine import Document
+from flask.ext.mongoengine import DoesNotExist
+from flask.ext.mongoengine import MultipleObjectsReturned
 from mongoengine.fields import StringField, BooleanField, DateTimeField, FloatField
 
 
@@ -13,14 +13,12 @@ class User(Document):
     The User class is a model representing a CDC user.
 
     :param username: The user's username
-    :param password: The user's password
     :param is_approver: Determines if the user is a payroll approver
     :param is_admin: Determines if the user is an admin
     :param ssn: The user's social security number
     :param wage: The user's hourly wage
     """
     username = StringField(max_length=255, required=True)
-    password = StringField(max_length=255, required=True)
     is_approver = BooleanField(default=False, required=True)
     is_admin = BooleanField(default=False, required=True)
     ssn = StringField(default=None)

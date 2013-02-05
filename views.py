@@ -1,9 +1,11 @@
 import datetime
 import time
+import ldap
 import logging
 import json
+import re
 
-from flask import render_template, request, redirect, url_for, session, abort
+from flask import render_template, request, redirect, url_for, session, abort, send_file
 
 from flask.views import MethodView
 import flask_login
@@ -87,24 +89,60 @@ class Login(UserAwareView):
 
     def post(self):
         form = forms.LoginForm(request.form)
-        authorized = False
-        error = ''
+        user = None
 
         username = form.username.data
+        username = re.escape(username)
         password = form.password.data
         remember = form.remember_me.data
 
         if form.validate():
-            user = User.get_user_by_username(username)
-            if not user:
-                return "Incorrect Username"
-            authorized = utils.check_password(password, user)
+            try:
+                logging.warning("Starting LDAP")
+                conn = ldap.initialize('ldap://ldapaddress-here')
+                conn.protocol_version = 3
+                conn.set_option(ldap.OPT_REFERRALS, 0)
+                conn.simple_bind_s(username + '@site-here.cdc.com', password)
+            
+                result_id = conn.search('DC=DC-here', ldap.SCOPE_SUBTREE, "(sAMAccountName=" + username + ")")
+                                
+                result_set = []
+                while 1:
+                    result_type, result_data = conn.result(result_id, 0)
+                    if (result_data == []):
+                        break
+                    else:
+                        if result_type == ldap.RES_SEARCH_ENTRY:
+                            result_set.append(result_data)
+                
+                # At this point, we have gotten the user from
+                # the AD server, and verified that they are
+                # active
+                if isActive or isTeamAdmin:
+                    user = User.get_user_by_username(username)
+                
+                    if not user:
+                        logging.debug("Creating User for: %s" % username)
+                        user = User(username=username,
+                                    is_approver=False,
+                                    is_admin=False,
+                                    ssn="00000000")
+            
+            except ldap.INVALID_CREDENTIALS:
+                logging.warning("Invalid Credentials")
+                user = None
+            except ldap.SERVER_DOWN:
+                logging.warning("Server down...")
+                user = None
+            
+            if user:
+                user.save()
 
-            if authorized:
+                logging.debug("Authorized!")
                 flask_login.login_user(user, remember=remember)
                 return "success"
-
-        return "Incorrect Password"
+            
+        return "Incorrect username or password"
 
 
 class Logout(UserAwareView):
@@ -122,15 +160,20 @@ class Payroll(UserAwareView):
     """
     The view for the payroll page.
     """
+    decorators = [login_required]
+    
     def get(self, payroll_user=None, week=None):
+        if payroll_user and not payroll_user == self.user.username:
+            return redirect(url_for("payroll"))
+        
         start_date = utils.get_last_monday(datetime.date.today())
         end_date = start_date + datetime.timedelta(days=6)
         if week:
             start_date = utils.get_last_monday(datetime.date.fromtimestamp(float(week)))
             end_date = start_date + datetime.timedelta(days=6)
-            records = TimeRecord.get_current_week(payroll_user or self.user.username, start_date)
+            records = TimeRecord.get_current_week(self.user.username, start_date)
         else:
-            records = TimeRecord.get_current_week(payroll_user or self.user.username)
+            records = TimeRecord.get_current_week(self.user.username)
         if not records:
             return abort(404)
 
@@ -140,7 +183,7 @@ class Payroll(UserAwareView):
             'nav':  'payroll',
             'user': self.user,
             'table_rows': records,
-            'payroll_username': payroll_user or self.user.username,
+            'username': self.user.username,
             'start_date': start_date,
             'end_date': end_date,
             'prev_timestamp': time.mktime(prev_date.timetuple()),
@@ -149,6 +192,9 @@ class Payroll(UserAwareView):
         return render_template('payroll.html', **context)
 
     def post(self, payroll_user=None, week=None):
+        if payroll_user and not payroll_user == self.user.username:
+            return redirect(url_for('payroll'))
+        
         for input, value in request.form.iteritems():
             if value:
                 punch_type, input_id = input.split('-')
@@ -182,7 +228,12 @@ class Approve(UserAwareView):
     """
     The view for the approve page.
     """
+    decorators = [login_required]
+    
     def get(self):
+        if not self.user.is_approver:
+            return redirect(url_for('payroll'))
+
         context = {
             'nav': 'approve',
             'user': self.user
@@ -195,6 +246,9 @@ class Approve(UserAwareView):
         return render_template('approve.html', **context)
 
     def post(self):
+        if not self.user.is_approver:
+            return ""
+
         id = None
         approver = None
         if 'id' in request.form:
@@ -206,7 +260,7 @@ class Approve(UserAwareView):
 
         time_record = TimeRecord.objects(id=id).get()
         time_record.approved = True
-        time_record.approved_by = approver
+        time_record.approved_by = self.user.username
         time_record.save()
 
         return approver
@@ -216,8 +270,13 @@ class Admin(UserAwareView):
     """
     The view for the admin page.
     """
+    decorators = [login_required]
+    
     def get(self):
-        users = User.objects()
+        if not self.user.is_admin:
+            return redirect(url_for('payroll'))
+        
+        users = User.objects(is_team_admin=False)
         add_user_form = forms.AddUser()
         context = {
             'nav': 'admin',
@@ -229,6 +288,9 @@ class Admin(UserAwareView):
         return render_template('admin.html', **context)
 
     def post(self):
+        if not self.user.is_admin:
+            return ""
+        
         if not 'username' in request.form:
             return 'error'
 
@@ -254,22 +316,25 @@ class AddUser(UserAwareView):
     """
     The AJAX endpoint for adding a user to the system.
     """
+    decorators = [login_required]
+    
     def post(self):
+        if not self.user.is_admin:
+            return ""
+        
         form = forms.AddUser(request.form)
         if form.validate():
             username = form.username.data
-            password = form.password.data
             is_admin = form.is_admin.data
             is_approver = form.is_approver.data
             ssn = form.ssn.data
             wage = form.wage.data
 
             user = User(username=username,
-                 password=password,
-                 is_admin=is_admin,
-                 is_approver=is_approver,
-                 ssn=ssn,
-                 wage=wage).save()
+                        is_admin=is_admin,
+                        is_approver=is_approver,
+                        ssn=ssn,
+                        wage=wage).save()
 
             data = {'user': user}
 
@@ -281,10 +346,14 @@ class DeleteUser(UserAwareView):
     """
     The AJAX endpoint for deleting a user from the system.
     """
+    decorators = [login_required]
+    
     def post(self):
+        if not self.user.is_admin and not self.user.is_team_admin:
+            return "error"
+
         username = None
         operator = None
-        logging.warning(request.form)
         if 'username' in request.form:
             username = request.form['username']
         if 'operator' in request.form:
@@ -292,48 +361,70 @@ class DeleteUser(UserAwareView):
         if not username or not operator:
             return 'error'
 
-        deleted = User.delete_user(username)
-        return "done"
+        deleted = User.delete_user(str(username))
+        return 'done'
 
 
-class GetInfo(MethodView):
+class Export(UserAwareView):
     """
     The REST API endpoint for getting payroll info about a user.
     """
+    
     def get(self, username):
+        if not self.user or not self.user.is_admin:
+            return redirect('http://www.site2.cdc.com/login')
+        
+        import tempfile
+        from openpyxl import Workbook        
         days = int(request.args.get('days', 14))
 
         user = User.get_user_by_username(username)
         if not user:
             abort(404)
 
-        records = TimeRecord.get_approved_records_by_username(username, num_days=days)
-        record_list = []
+        records = TimeRecord.get_approved_records_by_username(user.username, num_days=days)
+
+        wb = Workbook()
+        ws = wb.worksheets[0]
+        ws.title = "Payroll Information"
+    
+        # User name
+        ws.cell('%s%s' % ('A', 1)).value = 'User'
+        ws.cell('%s%s' % ('A', 1)).style.font.bold = True
+        ws.cell('%s%s' % ('B', 1)).value = user.username
+
+        # SSN
+        ws.cell('%s%s' % ('A', 2)).value = 'SSN'
+        ws.cell('%s%s' % ('A', 2)).style.font.bold = True
+        ws.cell('%s%s' % ('B', 2)).value = user.ssn
+    
+        # TimeRecord headers
+        ws.cell('%s%s' % ('A', 4)).value = 'Date'
+        ws.cell('%s%s' % ('A', 4)).style.font.bold = True
+        ws.cell('%s%s' % ('B', 4)).value = 'Clock In'
+        ws.cell('%s%s' % ('B', 4)).style.font.bold = True
+        ws.cell('%s%s' % ('C', 4)).value = 'Clock Out'
+        ws.cell('%s%s' % ('C', 4)).style.font.bold = True
+        ws.cell('%s%s' % ('D', 4)).value = 'Approved?'
+        ws.cell('%s%s' % ('D', 4)).style.font.bold = True
+        ws.cell('%s%s' % ('E', 4)).value = 'Approved By'
+        ws.cell('%s%s' % ('E', 4)).style.font.bold = True
+
+        # All TimeRecords
+        row = 5
         for record in records:
-            record_list.append({
-                'date': record.date.strftime('%B %d'),
-                'clock-in': record.clock_in.strftime('%I:%M %p'),
-                'clock-out': record.clock_out.strftime('%I:%M %p'),
-                'approved': record.approved,
-                'approved-by': record.approved_by
-            })
+            ws.cell('%s%s' % ('A', row)).value = record.date.strftime('%B %d')
+            ws.cell('%s%s' % ('B', row)).value = record.clock_in.strftime('%I:%M %p')
+            ws.cell('%s%s' % ('C', row)).value = record.clock_out.strftime('%I:%M %p')
+            ws.cell('%s%s' % ('D', row)).value = record.approved
+            ws.cell('%s%s' % ('E', row)).value = record.approved_by
+        
+            row += 1
 
-        response = {
-            'username': user.username,
-            'ssn': user.ssn,
-            'wage': user.wage,
-            'records': record_list
-        }
+        filename = tempfile.mktemp()
+        wb.save(filename=filename)
 
-        return json.dumps(response)
-
-
-class GetUsers(MethodView):
-    """
-    The REST API endpoint for getting a list of users.
-    """
-    def get(self):
-        users = User.objects()
-        user_list = [user.username for user in users]
-        return json.dumps({'users': user_list})
-
+        return send_file(filename, 
+                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                         as_attachment=True,
+                         attachment_filename="%s.xlsx" % user.username)

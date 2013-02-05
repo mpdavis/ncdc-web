@@ -30,7 +30,7 @@
                     <td id="edit-{{ user.username }}-admin">{{ user.is_admin }}</td>
                     <td style="width: 248px;">
                         <button id="edit-{{ user.username }}" class="btn btn-inverse edit-button"><i class="icon-edit icon-white"></i> Edit</button>
-                        <a href="http://{{ api_server }}/export/{{ user.username }}.xlsx" class="btn btn-inverse"><i class="icon-file icon-white"></i> Report</a>
+                        <a href="http://{{ api_server }}/export/{{ user.username }}" class="btn btn-inverse"><i class="icon-file icon-white"></i> Report</a>
                         <button href="#deleteUserModal" id="delete-{{ user.username }}" class="btn btn-danger delete-button" data-toggle="modal"><i class="icon-remove icon-white"></i> Delete</button>
                     </td>
                 </tr>
