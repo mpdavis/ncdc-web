@@ -253,11 +253,15 @@ class AddUser(UserAwareView):
             password = form.password.data
             is_admin = form.is_admin.data
             is_approver = form.is_approver.data
+            ssn = form.ssn.data
+            wage = form.wage.data
 
             user = User(username=username,
                  password=password,
                  is_admin=is_admin,
-                 is_approver=is_approver).save()
+                 is_approver=is_approver,
+                 ssn=ssn,
+                 wage=wage).save()
 
             data = {'user': user}
 
