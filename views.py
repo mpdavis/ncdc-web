@@ -88,6 +88,7 @@ class Login(UserAwareView):
     def post(self):
         form = forms.LoginForm(request.form)
         authorized = False
+        error = ''
 
         username = form.username.data
         password = form.password.data
@@ -95,12 +96,15 @@ class Login(UserAwareView):
 
         if form.validate():
             user = User.get_user_by_username(username)
+            if not user:
+                return "Incorrect Username"
             authorized = utils.check_password(password, user)
 
             if authorized:
                 flask_login.login_user(user, remember=remember)
+                return "success"
 
-        return redirect(url_for('payroll'))
+        return "Incorrect Password"
 
 
 class Logout(UserAwareView):
