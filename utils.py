@@ -27,7 +27,9 @@ def check_password(raw_password, user):
     :param raw_password: The password to verify against the user object.
     :param user: The User object to verify the password against.
     """
-    return raw_password == user.password
+    if user:
+        return raw_password == user.password
+    return False
 
 
 def get_last_monday(today):

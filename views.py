@@ -144,7 +144,7 @@ class Payroll(UserAwareView):
         }
         return render_template('payroll.html', **context)
 
-    def post(self):
+    def post(self, payroll_user=None, week=None):
         for input, value in request.form.iteritems():
             if value:
                 punch_type, input_id = input.split('-')
@@ -166,6 +166,10 @@ class Payroll(UserAwareView):
                     current_record.set_hours()
 
                 current_record.save()
+        if payroll_user and week:
+            return redirect((url_for('payroll',
+                                     payroll_user=payroll_user,
+                                     week=week)))
 
         return redirect(url_for('payroll'))
 
