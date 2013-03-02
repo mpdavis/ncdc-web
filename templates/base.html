@@ -10,12 +10,13 @@
     </head>
 
     <body>
+	
         <div id="main-wrapper">
-            <div class="container-narrow">
+            <div class="container">
 
                 <div class="masthead">
                     <ul class="nav nav-pills pull-right">
-                    {% if not user %}
+                   {% if not user %}
                         <li{% if nav == "home" %} class="active"{% endif %}><a href="{{ url_for('home') }}">Home</a></li>
                         <li{% if nav == "about" %} class="active"{% endif %}><a href="{{ url_for('about') }}">About</a></li>
                         <li{% if nav == "login" %} class="active"{% endif %}><a href="{{ url_for('login') }}">Login</a></li>
@@ -34,7 +35,17 @@
                 </div>
 
                 <hr>
-
+		    {% with messages = get_flashed_messages() %}
+                      {% if messages %}
+	               <div class="alert">
+	                <a href="#" class="close" data-dismiss="alert">&times;</a>
+                          {% for message in messages %}
+                            {{ message }}
+                          {% endfor %}
+	                </div>
+                      {% endif %}
+                    {% endwith %}
+ 
                 {% block main %}{% endblock %}
 
                 <div id="push"></div>

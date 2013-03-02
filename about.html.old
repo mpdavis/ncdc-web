@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block main %}
+
+<div class="jumbotron">
+    <h1>About Us</h1>
+    <p class="lead">Test - Nick really likes tacos. <p> So does Corey The White </p><p>
+</div>
+
+{% endblock %}
