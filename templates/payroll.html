@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block main %}
+
+    <div class="alert-wrapper">
+        <div id="success" class="alert alert-success hide">
+            Something
+        </div>
+    </div>
+
+    <div class="row">
+{#        <div class="span12">#}
+            <div style="text-align: center">
+                <a href="{{ url_for('payroll') }}">Current Week</a>
+            </div>
+{#        </div>#}
+    </div>
+
+
+    <div class="payroll-paginator">
+        <a href="{{ url_for('payroll', payroll_user=payroll_username, week=prev_timestamp) }}" class="icon-arrow-left"></a>
+        <div class="boundaries">
+            {{ start_date.strftime("%A, %B %d") }} &nbsp; - &nbsp;
+            {{ end_date.strftime("%A, %B %d") }}
+        </div>
+        <a href="{{ url_for('payroll', payroll_user=payroll_username, week=next_timestamp) }}" class="icon-arrow-right"></a>
+    </div>
+
+    <form class="payroll-form" id="payroll-form" method="post">
+        <table class="table table-bordered table-striped">
+            <thead>
+            <tr>
+                <th>Day</th>
+                <th>Date</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Hours</th>
+                <th>Approved By</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% if table_rows %}
+                {% for row in table_rows %}
+                    <tr>
+                        <td>{{ row.date.strftime('%A') }}</td>
+                        <td>{{ row.date.strftime('%B %d') }}</td>
+                        <td><input type="text" id="clockin-{{ row.id }}" name="clockin-{{ row.id }}" value="{% if row.clock_in %}{{ row.clock_in.strftime('%I:%M %p') }}{% endif %}" class="payroll-input"></td>
+                        <td><input type="text" id="clockout-{{ row.id }}" name="clockout-{{ row.id }}" value="{% if row.clock_out %}{{ row.clock_out.strftime('%I:%M %p') }}{% endif %}" class="payroll-input"></td>
+                        <td>{% if row.hours %}{{ '%0.2f' % row.hours }}{% endif %}</td>
+                        <td class="centered-td">{% if row.approved %}{{ row.approved_by or '' }} {% elif user.is_approver %} <button class="btn btn-success btn-approve {% if not row.clock_in or not row.clock_out %}disabled{% endif %}" id="approve-{{ row.id }}" type="button"><i class="icon-ok icon-white"></i> Approve</button>{% endif %}</td>
+                    </tr>
+                {% endfor %}
+            {% endif %}
+            </tbody>
+        </table>
+        <input type="submit" value="Save" class="btn btn-primary btn-large pull-right">
+    </form>
+
+{% endblock %}
+
+{% block js %}
+
+    <script>
+        $(document).ready(function() {
+            var button;
+            var timeout;
+            var success_alert;
+            $('.btn-approve').click(function() {
+                button = $(this)
+                success_alert = $('#success')
+                $.post("{{ url_for('approve') }}", {'id': $(this).attr('id'), 'approver': "{{ user.username }}"},
+                    function(responseData) {
+                        clearTimeout(timeout)
+                        if (responseData) {
+                            success_alert.html('Time record approved by ' + responseData)
+                            button.parent().html(responseData)
+                        }
+                        $('#success').fadeIn();
+                        timeout = setTimeout(function() {$('#success').fadeOut()}, 3000);
+                });
+            });
+        });
+
+    </script>
+
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block main %}
+
+    <div class="alert-wrapper">
+        <div id="success" class="alert alert-success hide">
+            Something
+        </div>
+    </div>
+
+    <table id="approve-table" class="table table-bordered table-striped">
+        <thead>
+        <tr>
+            <th>User</th>
+            <th>Date</th>
+            <th>Clock In</th>
+            <th>Clock Out</th>
+            <th>Approve</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if records %}
+            {% for record in records %}
+                <tr>
+                    <td>{{ record.username }}</td>
+                    <td>{{ record.date.strftime('%B %d') }}</td>
+                    <td>{{ record.clock_in.strftime('%I:%M %p') }}</td>
+                    <td>{{ record.clock_out.strftime('%I:%M %p') }}</td>
+                    <td class="centered-td"><button class="btn btn-success btn-approve" id="approve-{{ record.id }}" type="button"><i class="icon-ok icon-white"></i> Approve</button></td>
+                </tr>
+            {% endfor %}
+        {% endif %}
+        </tbody>
+    </table>
+
+{% endblock %}
+
+{% block js %}
+
+    <script>
+        $(document).ready(function() {
+            var button;
+            var timeout;
+            var success_alert;
+
+            $('.btn-approve').click(function() {
+                console.log('test')
+                button = $(this)
+                success_alert = $('#success')
+                $.post("{{ url_for('approve') }}", {'id': $(this).attr('id'), 'approver': "{{ user.username }}"},
+                        function(responseData) {
+                            clearTimeout(timeout)
+                            if (responseData) {
+                                success_alert.html('Time record approved by ' + responseData)
+                                button.parent().html(responseData)
+                            }
+                            $('#success').fadeIn();
+                            timeout = setTimeout(function() {$('#success').fadeOut()}, 3000);
+                        });
+            });
+        });
+
+    </script>
+
+{% endblock %}

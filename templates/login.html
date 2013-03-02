@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block main %}
+
+    <form class="form-signin" method="post">
+        <h2 class="form-signin-heading">Please sign in</h2>
+
+        <div id="error" class="alert alert-danger" style="display: none;">Error</div>
+        {{ form.username(placeholder='Username') }}
+        {{ form.password(placeholder='Password') }}
+        <button id="login-button" class="btn btn-large btn-primary" type="button">Sign in</button>
+    </form>
+
+
+{% endblock %}
+{% block js %}
+    <script>
+        $(document).ready(function() {
+            var error_alert;
+
+            function login() {
+                error_alert = $('#error')
+                $.post("{{ url_for('login') }}", {'username': $('#username').val(), 'password': $('#password').val()},
+                        function(responseData) {
+                            if (responseData) {
+                                if (responseData == "success") {
+                                    window.location = {{ url_for('payroll') }}
+                                } else {
+                                    error_alert.html(responseData)
+                                    $('#error').fadeIn();
+                                    setTimeout(function() {$('#success').fadeOut()}, 3000);
+                                }
+                            }
+
+                        });
+            }
+
+            $(".form-signin").keypress(function(e) {
+                if (e && e.which == 13) {
+                    login();
+                }
+            })
+
+            $('#login-button').click(function() {
+                login();
+            })
+
+        });
+
+    </script>
+
+{% endblock %}

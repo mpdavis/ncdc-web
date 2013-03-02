@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Cyclone Development Company - Payroll</title>
+
+        <link href="{{ url_for('static', filename='css/bootstrap.css') }}" rel="stylesheet">
+        <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+
+    </head>
+
+    <body>
+	
+        <div id="main-wrapper">
+            <div class="container">
+
+                <div class="masthead">
+                    <ul class="nav nav-pills pull-right">
+                   {% if not user %}
+                        <li{% if nav == "home" %} class="active"{% endif %}><a href="{{ url_for('home') }}">Home</a></li>
+                        <li{% if nav == "about" %} class="active"{% endif %}><a href="{{ url_for('about') }}">About</a></li>
+                        <li{% if nav == "login" %} class="active"{% endif %}><a href="{{ url_for('login') }}">Login</a></li>
+                    {% else %}
+                        {% if user.is_admin %}
+                            <li{% if nav == "admin" %} class="active"{% endif %}><a href="{{ url_for('admin') }}">Admin</a></li>
+                        {% endif %}
+                        {% if user.is_approver %}
+                            <li{% if nav == "approve" %} class="active"{% endif %}><a href="{{ url_for('approve') }}">Approve</a></li>
+                        {% endif %}
+                        <li{% if nav == "payroll" %} class="active"{% endif %}><a href="{{ url_for('payroll') }}">Payroll</a></li>
+                        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                    {% endif %}
+                    </ul>
+                    <h3 class="muted">Cyclone Development Company</h3>
+                </div>
+
+                <hr>
+		    {% with messages = get_flashed_messages() %}
+                      {% if messages %}
+	               <div class="alert">
+	                <a href="#" class="close" data-dismiss="alert">&times;</a>
+                          {% for message in messages %}
+                            {{ message }}
+                          {% endfor %}
+	                </div>
+                      {% endif %}
+                    {% endwith %}
+ 
+                {% block main %}{% endblock %}
+
+                <div id="push"></div>
+            </div>
+
+        </div>
+
+        <div id="footer">
+            <div class="container-narrow">
+                <hr>
+                <p>&copy; Cyclone Development Company 2013</p>
+            </div>
+        </div>
+
+        <!-- JavaScript at the bottom for fast page loading -->
+
+        <script src="{{ url_for('static', filename='js/jquery.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/bootstrap.js') }}"></script>
+
+        <!-- Additional JavaScript libraries and plugins... -->
+        {% block js %}{% endblock %}
+
+    </body>
+</html>
