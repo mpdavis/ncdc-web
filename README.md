@@ -9,19 +9,26 @@ It goes without saying that this should never make it's way into any sort of pro
 
 ##MongoDB
 
-MongoDB is used as a backend datastore for the application.  MongoDB is available in most *nix distributions and can be installed on OSX via brew.
+MongoDB is used as a backend datastore for the application.
 
-###OSX
+###Ubuntu
 
-    brew update
-    brew install mongodb
+--Python LDAP--
+sudo apt-get install python-ldap
 
-###Linux
+--Mongo--
+Follow steps on: http://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubuntu/
+then run:
+sudo apt-get install mongodb-10gen
+sudo service mongodb restart
 
-Most Linux package management systems have a package for MongoDB
-
-##PIP Dependencies
+--Flask--
+sudo apt-get install python-virtualenv
+sudo apt-get install build-essential python-dev
 
 The rest of the dependencies can all be installed via pip.  A requirements.txt is provided for easy installation.
 
-    pip install -r requirements.txt
+sudo pip install -r requirements.txt
+
+--To Run (in development mode)--
+sudo python app.wsgi
