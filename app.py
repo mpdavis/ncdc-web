@@ -17,8 +17,9 @@ app = Flask(__name__, static_folder=os.path.join(PROJECT_ROOT, 'static'), static
 
 # Flask config settings
 app.config['MONGODB_DB'] = 'ncdc'
+app.config['MONGODB_SETTINGS'] = {'USERNAME':'<name>','PASSWORD':'<password>','DB':'<db>'}
 app.config['SECRET_KEY'] = 'my_super_secret_key'
-app.debug = True
+app.debug = False
 
 # Setting up the login manager for Flask-Login
 login_manager = LoginManager()
@@ -32,6 +33,7 @@ db = MongoEngine(app)
 # Add all of the url rules for the application.  Any url answered by the application must be
 # mapped to a view function here.
 add_urls(app)
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
