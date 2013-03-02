@@ -1,6 +1,6 @@
 import ldap
 
-LDAP_SERVER = "192.168.0.52"
+LDAP_SERVER = "1270.0.0.1"
 LDAP_PORT = 389
 
 def authenticate(username, password):
