@@ -9,17 +9,17 @@ def authenticate(username, password):
       return False
 
 def hasMembershipWithSession(username, session, membership):
-  if username == "bob" and membership == "TimesheetApprover":
+  if username == "bob" and membership == "PayrollApprover":
       return True
-  elif username == "jim" and membership == "TimesheetAdmin":
+  elif username == "jim" and membership == "PayrollAdmin":
       return True
   else:
       return False
   
 def hasMembership(username, password, membership):
-  if username == "bob" and membership == "TimesheetApprover":
+  if username == "bob" and membership == "PayrollApprover":
       return True
-  elif username == "jim" and membership == "TimesheetAdmin":
+  elif username == "jim" and membership == "PayrollAdmin":
       return True
   else:
       return False

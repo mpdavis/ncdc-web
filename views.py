@@ -83,10 +83,10 @@ class Login(UserAwareView):
                 # LDAP user create a new user with username of authenticated user
                 user = User.get_user_by_username(crypto.encrypt(username))
                 if not user:
-                    user = User(username=crypto.encrypt(username), is_admin=ldap_auth.hasMembershipWithSession(username, authorized, "TimesheetAdmin"), is_approver=ldap_auth.hasMembershipWithSession(username, authorized, "TimesheetApprover")).save()
+                    user = User(username=crypto.encrypt(username), is_admin=ldap_auth.hasMembershipWithSession(username, authorized, "PayrollAdmin"), is_approver=ldap_auth.hasMembershipWithSession(username, authorized, "PayrollApprover")).save()
                 else:
-                    user.is_approver = ldap_auth.hasMembershipWithSession(username, authorized, "TimesheetApprover")
-                    user.is_admin = ldap_auth.hasMembershipWithSession(username, authorized, "TimesheetAdmin")
+                    user.is_approver = ldap_auth.hasMembershipWithSession(username, authorized, "PayrollApprover")
+                    user.is_admin = ldap_auth.hasMembershipWithSession(username, authorized, "PayrollAdmin")
                     user.save()
 
                 # free up the LDAP resources, we are done with it
