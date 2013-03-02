@@ -1,4 +1,4 @@
-import datetime
+import datetime, hashlib
 
 from flask import redirect, url_for
 
@@ -28,7 +28,7 @@ def check_password(raw_password, user):
     :param user: The User object to verify the password against.
     """
     if user:
-        return raw_password == user.password
+        return hashlib.sha512(raw_password).hexdigest() == user.password
     return False
 
 

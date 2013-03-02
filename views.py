@@ -2,14 +2,16 @@ import datetime
 import time
 import logging
 import json
+import os
+import hashlib
 
-from flask import render_template, request, redirect, url_for, session, abort
+from flask import send_from_directory, render_template, request, redirect, url_for, session, abort, flash
 
 from flask.views import MethodView
 import flask_login
 from flask_login import login_required
 
-from settings import API_SERVER
+from settings import API_SERVER, TIMESHEET_DIR
 
 import utils
 import forms
@@ -118,37 +120,53 @@ class Logout(UserAwareView):
         return redirect(url_for('login'))
 
 
+class Report(UserAwareView):
+    """
+    This View will force download a report
+    """
+    def get(self, username=None):
+		if self.user is not None and self.user.is_admin:
+			return send_from_directory(TIMESHEET_DIR,username+".xlsx", as_attachment=True)
+		else:
+			return "Access Denied"
+
+
 class Payroll(UserAwareView):
     """
     The view for the payroll page.
     """
     def get(self, payroll_user=None, week=None):
-        start_date = utils.get_last_monday(datetime.date.today())
-        end_date = start_date + datetime.timedelta(days=6)
-        if week:
-            start_date = utils.get_last_monday(datetime.date.fromtimestamp(float(week)))
-            end_date = start_date + datetime.timedelta(days=6)
-            records = TimeRecord.get_current_week(payroll_user or self.user.username, start_date)
-        else:
-            records = TimeRecord.get_current_week(payroll_user or self.user.username)
-        if not records:
-            return abort(404)
+        if self.user is not None:
+          start_date = utils.get_last_monday(datetime.date.today())
+          end_date = start_date + datetime.timedelta(days=6)
+          if week:
+              start_date = utils.get_last_monday(datetime.date.fromtimestamp(float(week)))
+              end_date = start_date + datetime.timedelta(days=6)
+              records = TimeRecord.get_current_week(payroll_user or self.user.username, start_date)
+          else:
+              records = TimeRecord.get_current_week(payroll_user or self.user.username)
+          if not records:
+              return abort(404)
 
-        next_date = start_date + datetime.timedelta(days=7)
-        prev_date = start_date - datetime.timedelta(days=7)
-        context = {
-            'nav':  'payroll',
-            'user': self.user,
-            'table_rows': records,
-            'payroll_username': payroll_user or self.user.username,
-            'start_date': start_date,
-            'end_date': end_date,
-            'prev_timestamp': time.mktime(prev_date.timetuple()),
-            'next_timestamp': time.mktime(next_date.timetuple()),
-        }
-        return render_template('payroll.html', **context)
+          next_date = start_date + datetime.timedelta(days=7)
+          prev_date = start_date - datetime.timedelta(days=7)
+          context = {
+              'nav':  'payroll',
+              'user': self.user,
+              'table_rows': records,
+              'payroll_username': payroll_user or self.user.username,
+              'start_date': start_date,
+              'end_date': end_date,
+              'prev_timestamp': time.mktime(prev_date.timetuple()),
+              'next_timestamp': time.mktime(next_date.timetuple()),
+          }
+          return render_template('payroll.html', **context)
+        else:
+	  flash("Please log in before accessing the payroll system")
+	  return render_template('index.html')
 
     def post(self, payroll_user=None, week=None):
+      if self.user is not None:
         for input, value in request.form.iteritems():
             if value:
                 punch_type, input_id = input.split('-')
@@ -176,6 +194,9 @@ class Payroll(UserAwareView):
                                      week=week)))
 
         return redirect(url_for('payroll'))
+      else:
+        flash("Please log in before accessing the payroll system")
+        return render_template('index.html')
 
 
 class Approve(UserAwareView):
@@ -183,18 +204,25 @@ class Approve(UserAwareView):
     The view for the approve page.
     """
     def get(self):
-        context = {
-            'nav': 'approve',
-            'user': self.user
-        }
+        if self.user is not None:
+            if self.user.is_approver:
+                context = {'nav': 'approve','user': self.user}
 
-        records = TimeRecord.get_unapproved_records()
+                records = TimeRecord.get_unapproved_records()
 
-        context['records'] = records
+                context['records'] = records
 
-        return render_template('approve.html', **context)
+                return render_template('approve.html', **context)
+      	    else:
+	        flash("You are not an approver!")
+                return render_template('index.html')
+        else:
+	    flash("Please log in before accessing the payroll system")
+            return render_template('index.html')
+
 
     def post(self):
+      if self.user is not None and self.user.is_approver:
         id = None
         approver = None
         if 'id' in request.form:
@@ -210,6 +238,9 @@ class Approve(UserAwareView):
         time_record.save()
 
         return approver
+      else:
+        flash("You are not an approver!")
+        return render_template('index.html')
 
 
 class Admin(UserAwareView):
@@ -217,6 +248,7 @@ class Admin(UserAwareView):
     The view for the admin page.
     """
     def get(self):
+      if self.user is not None and self.user.is_admin:
         users = User.objects()
         add_user_form = forms.AddUser()
         context = {
@@ -227,8 +259,13 @@ class Admin(UserAwareView):
             'api_server': API_SERVER
         }
         return render_template('admin.html', **context)
+      else:
+        flash('Please log in before trying to access the admin page')
+        return render_template('index.html')
+
 
     def post(self):
+      if self.user is not None and self.user.is_admin:
         if not 'username' in request.form:
             return 'error'
 
@@ -248,6 +285,9 @@ class Admin(UserAwareView):
         }
 
         return render_template('admin_user_row.html', **data)
+      else:
+        flash('Please log in before trying to access the admin page')
+        return render_template('index.html')
 
 
 class AddUser(UserAwareView):
@@ -255,10 +295,11 @@ class AddUser(UserAwareView):
     The AJAX endpoint for adding a user to the system.
     """
     def post(self):
+      if self.user is not None and self.user.is_admin:
         form = forms.AddUser(request.form)
         if form.validate():
             username = form.username.data
-            password = form.password.data
+            password = hashlib.sha512(form.password.data).hexdigest()
             is_admin = form.is_admin.data
             is_approver = form.is_approver.data
             ssn = form.ssn.data
@@ -275,6 +316,8 @@ class AddUser(UserAwareView):
 
             return render_template('admin_user_row.html', **data)
         return 'error'
+      else:
+        return 'error'
 
 
 class DeleteUser(UserAwareView):
@@ -282,6 +325,7 @@ class DeleteUser(UserAwareView):
     The AJAX endpoint for deleting a user from the system.
     """
     def post(self):
+     if self.user is not None and self.user.is_admin:
         username = None
         operator = None
         logging.warning(request.form)
@@ -294,13 +338,16 @@ class DeleteUser(UserAwareView):
 
         deleted = User.delete_user(username)
         return "done"
+     else:
+       return "not done, you are not an admin!"
 
 
-class GetInfo(MethodView):
+class GetInfo(UserAwareView):
     """
     The REST API endpoint for getting payroll info about a user.
     """
     def get(self, username):
+      if self.user is not None and self.user.is_admin:
         days = int(request.args.get('days', 14))
 
         user = User.get_user_by_username(username)
@@ -324,16 +371,24 @@ class GetInfo(MethodView):
             'wage': user.wage,
             'records': record_list
         }
+      else:
+        response = {
+            'msg': 'You are not authenticated, or you do not have permission to use this action'
+        }
 
-        return json.dumps(response)
+      return json.dumps(response)
 
 
-class GetUsers(MethodView):
+class GetUsers(UserAwareView):
     """
     The REST API endpoint for getting a list of users.
     """
     def get(self):
+      if self.user is not None and self.user.is_admin:
         users = User.objects()
         user_list = [user.username for user in users]
         return json.dumps({'users': user_list})
+      else:
+        return json.dumps({'msg': 'you are not authenticated or you do not have permission to use this action'})
+
 
