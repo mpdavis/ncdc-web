@@ -13,9 +13,6 @@ html, body {
 }
 
 .main-logo {
-    position: absolute;
-    top: 150px;
-    left: 470px;
     height: 225px;
 }
 

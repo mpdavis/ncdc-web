@@ -1,13 +1,16 @@
+import logging
 import os
 import sys
 from flask import Flask, render_template, redirect, url_for
-from flask_mongoengine import MongoEngine
+from flask.ext.mongoengine import MongoEngine
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_login import LoginManager
 
 from utils import user_unauthorized_callback, load_user
 
 from urls import add_urls
+
+logging.basicConfig(level=logging.DEBUG)
 
 # Determining the project root.
 PROJECT_ROOT = os.path.dirname(os.path.realpath(__file__))
@@ -17,8 +20,8 @@ app = Flask(__name__, static_folder=os.path.join(PROJECT_ROOT, 'static'), static
 
 # Flask config settings
 app.config['MONGODB_DB'] = 'ncdc'
-app.config['SECRET_KEY'] = 'my_super_secret_key'
-app.debug = True
+app.config['SECRET_KEY'] = 'Your-Secret-Key-Here-Make-it-good-and-long-it-is-important'
+app.debug = False
 
 # Setting up the login manager for Flask-Login
 login_manager = LoginManager()
@@ -35,4 +38,4 @@ add_urls(app)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)
