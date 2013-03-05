@@ -25,7 +25,8 @@ then run:
 `sudo apt-get install mongodb-10gen`
 `sudo service mongodb restart`
 
---Flask--
+Flask
+
 `sudo apt-get install python-virtualenv`
 `sudo apt-get install build-essential python-dev`
 
