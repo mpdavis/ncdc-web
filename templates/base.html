@@ -4,35 +4,37 @@
         <meta charset="utf-8">
         <title>Cyclone Development Company - Payroll</title>
 
-        <link href="{{ url_for('static', filename='css/bootstrap.css') }}" rel="stylesheet">
+        <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
         <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
-
+        <link href="{{ url_for('static', filename='css/jquery-ui.css') }}" rel="stylesheet">
+        <link href="{{ url_for('static', filename='css/jquery.ptTimeSelect.css') }}" rel="stylesheet">
     </head>
 
     <body>
+        <!-- Y your in ma BaSE Lurkin my SOURCE?!? -->
         <div id="main-wrapper">
             <div class="container-narrow">
 
                 <div class="masthead">
                     <ul class="nav nav-pills pull-right">
                     {% if not user %}
-                        <li{% if nav == "home" %} class="active"{% endif %}><a href="{{ url_for('home') }}">Home</a></li>
-                        <li{% if nav == "about" %} class="active"{% endif %}><a href="{{ url_for('about') }}">About</a></li>
-                        <li{% if nav == "login" %} class="active"{% endif %}><a href="{{ url_for('login') }}">Login</a></li>
+                        <li><a href="{{ url_for('home') }}">Home</a></li>
+                        <li><a href="{{ url_for('about') }}">About</a></li>
+                        <li><a href="{{ url_for('login') }}">Login</a></li>
                     {% else %}
                         {% if user.is_admin %}
-                            <li{% if nav == "admin" %} class="active"{% endif %}><a href="{{ url_for('admin') }}">Admin</a></li>
+                            <li><a href="{{ url_for('admin') }}">Admin</a></li>
                         {% endif %}
                         {% if user.is_approver %}
-                            <li{% if nav == "approve" %} class="active"{% endif %}><a href="{{ url_for('approve') }}">Approve</a></li>
+                            <li><a href="{{ url_for('approve') }}">Approve</a></li>
                         {% endif %}
-                        <li{% if nav == "payroll" %} class="active"{% endif %}><a href="{{ url_for('payroll') }}">Payroll</a></li>
+                        <li><a href="{{ url_for('payroll') }}">Payroll</a></li>
                         <li><a href="{{ url_for('logout') }}">Logout</a></li>
                     {% endif %}
                     </ul>
                     <h3 class="muted">Cyclone Development Company</h3>
                 </div>
-
+                <!-- Please continue reading these comments and waisint your timez -->
                 <hr>
 
                 {% block main %}{% endblock %}
@@ -51,8 +53,11 @@
 
         <!-- JavaScript at the bottom for fast page loading -->
 
-        <script src="{{ url_for('static', filename='js/jquery.js') }}"></script>
-        <script src="{{ url_for('static', filename='js/bootstrap.js') }}"></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='js/jquery-ui.js') }}" ></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='js/jquery.min.js') }}" ></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='js/jquery.maskedinput-1.3.min.js') }}" ></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='js/jquery.ptTimeSelect.js') }}" ></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
 
         <!-- Additional JavaScript libraries and plugins... -->
         {% block js %}{% endblock %}

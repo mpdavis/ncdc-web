@@ -1,7 +1,7 @@
 NCDC Web Box
 ============
 
-This is a web application written for the 2013 Iowa State National Cyber Defense Competition.  It is purposefully written to be vulnerable to a number of attacks.
+This is a web application written for the 2013 Iowa State National Cyber Defense Competition.  It is purposefully written to be vulnerable to a number of attacks.  This particular branch contains modifications to make it CDC ready, this is the code that was used for Team 4 (Team Creeper) in the ISU 2013 NCDC.
 
 It goes without saying that this should never make it's way into any sort of production environment.
 
@@ -9,19 +9,40 @@ It goes without saying that this should never make it's way into any sort of pro
 
 ##MongoDB
 
-MongoDB is used as a backend datastore for the application.  MongoDB is available in most *nix distributions and can be installed on OSX via brew.
+MongoDB is used as a backend datastore for the application.
 
-###OSX
+###Ubuntu
 
-    brew update
-    brew install mongodb
+Python LDAP
 
-###Linux
+`sudo apt-get install python-ldap`
 
-Most Linux package management systems have a package for MongoDB
+Mongo
 
-##PIP Dependencies
+Follow steps on: http://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubuntu/
+
+then run:
+
+`sudo apt-get install mongodb-10gen`
+
+`sudo service mongodb restart`
+
+Flask
+
+`sudo apt-get install python-virtualenv`
+
+`sudo apt-get install build-essential python-dev`
 
 The rest of the dependencies can all be installed via pip.  A requirements.txt is provided for easy installation.
 
-    pip install -r requirements.txt
+`sudo pip install -r requirements.txt`
+
+To Run (in development mode)
+
+`sudo python app.wsgi`
+
+Production mode was run in Apache 2.2 with mod_wsgi, mod_python, mod_security, and mod_evasion.
+
+Backups via Cron Job every 15 minutes:
+
+`*/15 * * * * /home/webuser/backup.sh > /dev/null`

@@ -9,43 +9,36 @@ from flask.views import MethodView
 import flask_login
 from flask_login import login_required
 
-from settings import API_SERVER
-
 import utils
+import crypto
+import ldap_auth
 import forms
 from models import User, TimeRecord
 
+import xlwt
+import StringIO
+import mimetypes
+from flask import Response, send_file
+from werkzeug.datastructures import Headers
 
+# A base view class to extend
 class UserAwareView(MethodView):
-    """
-    A base view class to extend.
-    """
-
+    
+    # Adds the session property to the view
     @property
     def session(self):
-        """
-        Adds the session property to the view.
-        """
         return session
 
+    # Adds the user property to the view
     @property
     def user(self):
-        """
-        Adds the user property to the view.
-
-        :returns: The currently logged in user if one exists, else None
-        """
         if not flask_login.current_user.is_anonymous():
             return flask_login.current_user._get_current_object()
         else:
             return None
 
+    # Adds a helper function to the view to get the context
     def get_context(self, extra_ctx=None, **kwargs):
-        """
-        Adds a helper function to the view to get the context.
-
-        :returns: The current context with the user set.
-        """
         ctx = {
             'user': self.user,
         }
@@ -54,37 +47,27 @@ class UserAwareView(MethodView):
         ctx.update(kwargs)
         return ctx
 
-
+# The view for the home page
 class Home(UserAwareView):
-    """
-    The view for the home page.
-    """
     def get(self):
         context = self.get_context()
-        context['nav'] = 'home'
         return render_template('index.html', **context)
 
-
+# The view for the about page
 class About(UserAwareView):
-    """
-    The view for the about page.
-    """
     def get(self):
         context = self.get_context()
-        context['nav'] = 'about'
         return render_template('about.html', **context)
 
-
+# The view for the login page
 class Login(UserAwareView):
-    """
-    The view for the login page.
-    """
+    # GET /login
     def get(self):
         context = self.get_context()
-        context['nav'] = 'login'
         context['form'] = forms.LoginForm()
         return render_template('login.html', **context)
 
+    # POST /login
     def post(self):
         form = forms.LoginForm(request.form)
         authorized = False
@@ -92,37 +75,69 @@ class Login(UserAwareView):
 
         username = form.username.data
         password = form.password.data
-        remember = form.remember_me.data
 
         if form.validate():
-            user = User.get_user_by_username(username)
-            if not user:
-                return "Incorrect Username"
-            authorized = utils.check_password(password, user)
-
+            authorized = ldap_auth.authenticate(username, password)
             if authorized:
-                flask_login.login_user(user, remember=remember)
+                # authorized via LDAP, log in session.  If database is unaware of 
+                # LDAP user create a new user with username of authenticated user
+                user = User.get_user_by_username(crypto.encrypt(username))
+                if not user:
+                    user = User(username=crypto.encrypt(username), is_admin=ldap_auth.hasMembershipWithSession(username, authorized, "PayrollAdmin"), is_approver=ldap_auth.hasMembershipWithSession(username, authorized, "PayrollApprover")).save()
+                else:
+                    user.is_approver = ldap_auth.hasMembershipWithSession(username, authorized, "PayrollApprover")
+                    user.is_admin = ldap_auth.hasMembershipWithSession(username, authorized, "PayrollAdmin")
+                    user.save()
+
+                # free up the LDAP resources, we are done with it
+                ldap_auth.unauthenticate(authorized)
+                
+                flask_login.login_user(user, remember=False)
                 return "success"
+            else:
+                print "[Username: ", username, " invalid login.]"
 
-        return "Incorrect Password"
+        return "Incorrect Username or Password"
 
-
+# The view for the Logout page
 class Logout(UserAwareView):
-    """
-    The view for the logout page.
-    """
-    decorators = [login_required]
-
+    # GET /logout
     def get(self):
+
+        logout_options = ''
+        # how nice should we be about the log out process?
+        if request.args.get("byebye") == "yes":
+            logout_options = '?byebye=yes'
+
+        # check logged in
+        if not self.user or not self.user.username or not self.user.is_authenticated:
+            return redirect('/login' + logout_options)
+
         flask_login.logout_user()
-        return redirect(url_for('login'))
 
+        return redirect('/login' + logout_options)
 
+# The view for the payroll page
 class Payroll(UserAwareView):
-    """
-    The view for the payroll page.
-    """
+    # GET /payroll or /payroll/<week> or /payroll/<payroll_user>/<week>
+    @login_required
     def get(self, payroll_user=None, week=None):
+        # check logged in
+        if not self.user or not self.user.username or not self.user.is_authenticated:
+            return redirect('/logout?byebye=yes')
+
+        # if a payroll user is specified, the logged in user must be an approver (or it must be thier own account)
+        if payroll_user:
+            payroll_user = crypto.encrypt(payroll_user)
+            if not self.user.is_approver:
+                if not payroll_user == self.user.username:
+                    return redirect('/logout?byebye=yes')
+
+        # sanitize input for week parameter
+        if week:
+            if not utils.sanitize_number_input(week):
+                return redirect('/logout?byebye=yes')
+
         start_date = utils.get_last_monday(datetime.date.today())
         end_date = start_date + datetime.timedelta(days=6)
         if week:
@@ -137,10 +152,9 @@ class Payroll(UserAwareView):
         next_date = start_date + datetime.timedelta(days=7)
         prev_date = start_date - datetime.timedelta(days=7)
         context = {
-            'nav':  'payroll',
             'user': self.user,
             'table_rows': records,
-            'payroll_username': payroll_user or self.user.username,
+            'payroll_username' : payroll_user or self.user.username,
             'start_date': start_date,
             'end_date': end_date,
             'prev_timestamp': time.mktime(prev_date.timetuple()),
@@ -148,43 +162,91 @@ class Payroll(UserAwareView):
         }
         return render_template('payroll.html', **context)
 
+    # POST /payroll or /payroll/<payroll_user> or /payroll/<week>
+    @login_required
     def post(self, payroll_user=None, week=None):
+        # check logged in
+        if not self.user or not self.user.username or not self.user.is_authenticated:
+            return redirect('/logout?byebye=yes')
+
+        # make sure someone isn't trying to set someone else's payroll info...
+        if payroll_user:
+            if not payroll_user == crypto.decrypt(self.user.username):
+                print "INVALID USER REQUEST: ", payroll_user
+                return redirect('/logout?byebye=yes')
+
+        # sanitize input for week parameter
+        if week:
+            if not utils.sanitize_number_input(week):
+                print "INVALID WEEK PARAMETER: ", week
+                return redirect('/logout?byebye=yes')
+
         for input, value in request.form.iteritems():
             if value:
                 punch_type, input_id = input.split('-')
+
+                # check punch type
+                if not punch_type == 'clockin':
+                    if not punch_type == 'clockout':
+                        print "INVALID PUNCH TYPE: ", punch_type
+                        return redirect('/logout?byebye=yes')
+
+                # check record id input
+                if not utils.sanitize_mongo_hash(input_id):
+                    print "INVALID RECORD ID: ", input_id
+                    return redirect('/logout?byebye=yes')
+
                 current_record = TimeRecord.objects(id=input_id).get()
 
-                try:
-                    time = datetime.datetime.strptime(value, '%I:%M %p')
-                    day = current_record.date
-                    timestamp = datetime.datetime.combine(day, time.time())
-                except ValueError, e:
-                    pass
+                # only update the record if the current user actually owns it
+                # users can only update their own records...
+                if current_record.username == self.user.username:
+                    # only let the user update the record if it hasn't been approved (no after the fact modifications)
+                    if not current_record.approved:
 
-                if punch_type == 'clockin':
-                    current_record.clock_in = timestamp
-                else:
-                    current_record.clock_out = timestamp
+                        # check time value
+                        if not utils.sanitize_time_input(value):
+                            print "INVALID TIME ENTRY: ", value
+                            return redirect('/logout?byebye=yes')
 
-                if current_record.clock_in and current_record.clock_out:
-                    current_record.set_hours()
+                        try:
+                            time = datetime.datetime.strptime(value, '%I:%M %p')
+                            day = current_record.date
+                            timestamp = datetime.datetime.combine(day, time.time())
+                        except ValueError, e:
+                            pass
 
-                current_record.save()
+                        if punch_type == 'clockin':
+                            current_record.clock_in = timestamp
+                        else:
+                            current_record.clock_out = timestamp
+
+                        if current_record.clock_in and current_record.clock_out:
+                            current_record.set_hours()
+
+                        current_record.save()
+
         if payroll_user and week:
-            return redirect((url_for('payroll',
-                                     payroll_user=payroll_user,
-                                     week=week)))
+            return redirect((url_for('payroll', payroll_user=payroll_user, week=week)))
+        if self.user.username:
+            return redirect((url_for('payroll')))
 
-        return redirect(url_for('payroll'))
+        return redirect('/logout?byebye=yes')
 
-
+# The view for the approve page
 class Approve(UserAwareView):
-    """
-    The view for the approve page.
-    """
+    # GET /approve
+    @login_required
     def get(self):
+        # check logged in
+        if not self.user or not self.user.username or not self.user.is_authenticated:
+            return redirect('/logout?byebye=yes')
+
+        # check user is an approver
+        if not self.user.is_approver:
+            return redirect('/logout?byebye=yes')
+
         context = {
-            'nav': 'approve',
             'user': self.user
         }
 
@@ -194,146 +256,151 @@ class Approve(UserAwareView):
 
         return render_template('approve.html', **context)
 
+    # POST /approve
+    # called via AJAX
     def post(self):
+        # check logged in
+        if not self.user or not self.user.username or not self.user.is_authenticated:
+            return "error: not authenticated"
+
+        # check user is an approver
+        if not self.user.is_approver:
+            return "error: permission denied"
+
         id = None
-        approver = None
         if 'id' in request.form:
             approve, id = request.form['id'].split('-')
-        if 'approver' in request.form:
-            approver = request.form['approver']
-        if not id or not approver:
+        if not id:
             return "error"
 
         time_record = TimeRecord.objects(id=id).get()
         time_record.approved = True
-        time_record.approved_by = approver
+        time_record.approved_by = self.user.username
         time_record.save()
 
-        return approver
+        return "success"
 
-
-class Admin(UserAwareView):
-    """
-    The view for the admin page.
-    """
-    def get(self):
-        users = User.objects()
-        add_user_form = forms.AddUser()
-        context = {
-            'nav': 'admin',
-            'users': users,
-            'user': self.user,
-            'form': add_user_form,
-            'api_server': API_SERVER
-        }
-        return render_template('admin.html', **context)
-
-    def post(self):
-        if not 'username' in request.form:
-            return 'error'
-
-        user = User.get_user_by_username(request.form['username'])
-        for key, value in request.form.items():
-            if hasattr(user, key):
-                if value == 'true':
-                    value = True
-                elif value == 'false':
-                    value = False
-                setattr(user, key, value)
-            user.save()
-
-        data = {
-            'user': user,
-            'api_server': API_SERVER
-        }
-
-        return render_template('admin_user_row.html', **data)
-
-
-class AddUser(UserAwareView):
-    """
-    The AJAX endpoint for adding a user to the system.
-    """
-    def post(self):
-        form = forms.AddUser(request.form)
-        if form.validate():
-            username = form.username.data
-            password = form.password.data
-            is_admin = form.is_admin.data
-            is_approver = form.is_approver.data
-            ssn = form.ssn.data
-            wage = form.wage.data
-
-            user = User(username=username,
-                 password=password,
-                 is_admin=is_admin,
-                 is_approver=is_approver,
-                 ssn=ssn,
-                 wage=wage).save()
-
-            data = {'user': user}
-
-            return render_template('admin_user_row.html', **data)
-        return 'error'
-
-
-class DeleteUser(UserAwareView):
-    """
-    The AJAX endpoint for deleting a user from the system.
-    """
-    def post(self):
-        username = None
-        operator = None
-        logging.warning(request.form)
-        if 'username' in request.form:
-            username = request.form['username']
-        if 'operator' in request.form:
-            operator = request.form['operator']
-        if not username or not operator:
-            return 'error'
-
-        deleted = User.delete_user(username)
-        return "done"
-
-
-class GetInfo(MethodView):
-    """
-    The REST API endpoint for getting payroll info about a user.
-    """
+# The view for the export page
+class Export(UserAwareView):
+    # GET /export/<username>
+    @login_required
     def get(self, username):
-        days = int(request.args.get('days', 14))
+        # check logged in
+        if not self.user or not self.user.username or not self.user.is_authenticated:
+            return redirect('/logout?byebye=yes')
 
+        # check user is an admin
+        if not self.user.is_admin:
+            return redirect('/logout?byebye=yes')
+
+        # set the default user if /export was called
+        if not username:
+            username = self.user.username
+        else:
+            username = crypto.encrypt(username)
+
+        days = 14
         user = User.get_user_by_username(username)
+
         if not user:
             abort(404)
 
-        records = TimeRecord.get_approved_records_by_username(username, num_days=days)
-        record_list = []
-        for record in records:
-            record_list.append({
-                'date': record.date.strftime('%B %d'),
-                'clock-in': record.clock_in.strftime('%I:%M %p'),
-                'clock-out': record.clock_out.strftime('%I:%M %p'),
-                'approved': record.approved,
-                'approved-by': record.approved_by
-            })
+        # create workbook
+        wb = xlwt.Workbook()
+        ws = wb.add_sheet('Sheet 1')
 
-        response = {
-            'username': user.username,
-            'ssn': user.ssn,
-            'wage': user.wage,
-            'records': record_list
+        # write user
+        ws.write(0,0,'User')
+        ws.write(0,1,crypto.decrypt(user.username))
+       
+        # write SSN
+        ws.write(1,0,'SSN')
+        ws.write(1,1,crypto.decrypt(user.ssn))
+
+        # write table headers
+        ws.write(3,0,'Date')
+        ws.write(3,1,'Clock In')
+        ws.write(3,2,'Clock Out')
+        ws.write(3,3,'Approved?')
+        ws.write(3,4,'Approved By')
+
+        # write out table entries
+        records = TimeRecord.get_approved_records_by_username(username, num_days=days)
+
+        row = 4
+        for record in records:
+            ws.write(row,0,record.date.strftime('%B %d'))
+            ws.write(row,1,record.clock_in.strftime('%I:%M %p'))
+            ws.write(row,2,record.clock_out.strftime('%I:%M %p'))
+            ws.write(row,3,record.approved)
+            ws.write(row,4,crypto.decrypt(record.approved_by))
+            row = row + 1
+
+        # create IO buffer
+        output = StringIO.StringIO()
+
+        # save workbook into buffer
+        wb.save(output)
+
+        # reset buffer pointer and trigger response
+        output.seek(0)
+        return send_file(output, attachment_filename=crypto.decrypt(user.username) + ".xls", as_attachment=True)
+
+# The view for the admin page
+class Admin(UserAwareView):
+    # GET /admin
+    @login_required
+    def get(self):
+        # check logged in
+        if not self.user or not self.user.username or not self.user.is_authenticated:
+            return redirect('/logout?byebye=yes')
+
+        # check user is an admin
+        if not self.user.is_admin:
+            return redirect('/logout?byebye=yes')
+
+        users = User.objects().order_by('id')
+        context = {
+            'user' : self.user,
+            'users' : users,
+            'form': forms.ModifyUser()
         }
 
-        return json.dumps(response)
+        return render_template('admin.html', **context)
 
+    # POST /admin
+    @login_required
+    def post(self):
+        # check logged in
+        if not self.user or not self.user.username or not self.user.is_authenticated:
+            return "error: permission denied"
 
-class GetUsers(MethodView):
-    """
-    The REST API endpoint for getting a list of users.
-    """
+        # check user is an admin
+        if not self.user.is_admin:
+            return "error: permission denied"
+
+        form = forms.ModifyUser(request.form)
+        if form.validate():
+            user = User.get_user_by_username(crypto.encrypt(form.username.data))
+            if user:
+                if not utils.sanitize_number_input(str(form.wage.data)):
+                    return "error: invalid wage"
+                user.wage = crypto.encrypt(str(form.wage.data))
+                if not user.ssn:
+                    if not utils.validate_ssn(form.ssn.data):
+                        return "error: invalid SSN"
+                    user.ssn = crypto.encrypt(form.ssn.data)
+                user.save()
+                return "success"
+            return "error: user does not exist"
+        return "error: invalid input"
+
+# The view for the api page
+class API(UserAwareView):
+    # GET /api
     def get(self):
-        users = User.objects()
-        user_list = [user.username for user in users]
-        return json.dumps({'users': user_list})
-
+        context = {
+            'timestamp1' : datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S %p"),
+            'timestamp2' : datetime.datetime.now().strftime("%H:%M:%S %p")
+        }
+        return render_template('api.html', **context)

@@ -87,7 +87,12 @@ html, body {
     margin-bottom: 30px;
 }
 
-input.payroll-input {
+input.payroll-input-clockin {
+    width: 70px;
+    margin-bottom: 0px;
+}
+
+input.payroll-input-clockout {
     width: 70px;
     margin-bottom: 0px;
 }
@@ -109,14 +114,4 @@ input.payroll-input {
     width: 560px;
     display: inline-block;
     text-align: center;
-}
-
-
-/* Admin Page */
-#add-user-button {
-    margin-bottom: 10px;;
-}
-
-.table-buttons {
-    min-height: 40px;
 }

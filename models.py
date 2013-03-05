@@ -7,25 +7,21 @@ from flask_mongoengine import DoesNotExist
 from flask_mongoengine import MultipleObjectsReturned
 from mongoengine.fields import StringField, BooleanField, DateTimeField, FloatField
 
-
+# The User class is a model representing a CDC user
 class User(Document):
-    """
-    The User class is a model representing a CDC user.
-
-    :param username: The user's username
-    :param password: The user's password
-    :param is_approver: Determines if the user is a payroll approver
-    :param is_admin: Determines if the user is an admin
-    :param ssn: The user's social security number
-    :param wage: The user's hourly wage
-    """
-    username = StringField(max_length=255, required=True)
-    password = StringField(max_length=255, required=True)
-    is_approver = BooleanField(default=False, required=True)
-    is_admin = BooleanField(default=False, required=True)
+    # DATABASE ENTRIES
+    # username: The user's username
+    username = StringField(max_length=512, required=True)
+    # The user's social security number
     ssn = StringField(default=None)
-    wage = FloatField(default=7.50)
+    # wage: The user's hourly wage
+    wage = StringField(default=None)
+    # defines whether or not the user is an approver (overwritten at login)
+    is_approver = BooleanField(default=False)
+    # defines whether or not the user is an admin (overwritten at login)
+    is_admin = BooleanField(default=False)
 
+    # OBJECT METHODS
     def is_authenticated(self):
         return True
 
@@ -38,40 +34,15 @@ class User(Document):
     def get_id(self):
         return self.username
 
+    # Gets a user object by the username
+    # CLASS METHOD
     @classmethod
     def get_user_by_username(cls, username):
-        """
-        Gets a user object by the username
-
-        :param username: The username to lookup.
-        :returns: The user object if it exists, else False
-        """
         try:
             user = User.objects(username=username).get()
             return user
         except DoesNotExist, e:
             return False
-
-    @classmethod
-    def delete_user(cls, username):
-        """
-        Deletes a user by the username
-
-        :param username: The username to delete
-        :returns: True if a user is found and deleted, False otherwise
-        """
-        try:
-            user = User.objects(username=username).get()
-            user.delete()
-            return True
-        except DoesNotExist, e:
-            return False
-        except MultipleObjectsReturned, e:
-            # There were multiple users made with the same username.
-            # Usernames should be unique, so just delete them all.
-            for user in User.objects(username=username):
-                user.delete()
-            return True
 
 
 class TimeRecord(Document):
@@ -140,6 +111,7 @@ class TimeRecord(Document):
             records = TimeRecord.objects(date__gte=last_monday,
                                          date__lt=next_monday,
                                          username=username).order_by('date')
+
         return records
 
     @classmethod

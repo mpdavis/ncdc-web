@@ -4,7 +4,6 @@ from auth import models as auth_models
 
 from app import db
 
-
 def get_time_records(username, days=7):
     today = datetime.date.today()
     delta = datetime.timedelta(days=days)
