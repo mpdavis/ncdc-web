@@ -24,11 +24,13 @@ Follow steps on: http://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubun
 then run:
 
 `sudo apt-get install mongodb-10gen`
+
 `sudo service mongodb restart`
 
 Flask
 
 `sudo apt-get install python-virtualenv`
+
 `sudo apt-get install build-essential python-dev`
 
 The rest of the dependencies can all be installed via pip.  A requirements.txt is provided for easy installation.
