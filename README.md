@@ -13,22 +13,27 @@ MongoDB is used as a backend datastore for the application.
 
 ###Ubuntu
 
---Python LDAP--
-sudo apt-get install python-ldap
+Python LDAP
+`sudo apt-get install python-ldap`
 
---Mongo--
+Mongo
+
 Follow steps on: http://docs.mongodb.org/manual/tutorial/install-mongodb-on-ubuntu/
+
 then run:
-sudo apt-get install mongodb-10gen
-sudo service mongodb restart
+
+`sudo apt-get install mongodb-10gen`
+`sudo service mongodb restart`
 
 --Flask--
-sudo apt-get install python-virtualenv
-sudo apt-get install build-essential python-dev
+`sudo apt-get install python-virtualenv`
+`sudo apt-get install build-essential python-dev`
 
 The rest of the dependencies can all be installed via pip.  A requirements.txt is provided for easy installation.
 
-sudo pip install -r requirements.txt
+`sudo pip install -r requirements.txt`
 
---To Run (in development mode)--
-sudo python app.wsgi
+To Run (in development mode)
+`sudo python app.wsgi`
+
+Production mode was run in Apache 2.2 with mod_wsgi, mod_python, mod_security, and mod_evasion.
