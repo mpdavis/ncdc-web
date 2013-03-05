@@ -42,3 +42,7 @@ To Run (in development mode)
 `sudo python app.wsgi`
 
 Production mode was run in Apache 2.2 with mod_wsgi, mod_python, mod_security, and mod_evasion.
+
+Backups via Cron Job every 15 minutes:
+
+`*/15 * * * * /home/webuser/backup.sh > /dev/null`
