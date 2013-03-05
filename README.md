@@ -14,6 +14,7 @@ MongoDB is used as a backend datastore for the application.
 ###Ubuntu
 
 Python LDAP
+
 `sudo apt-get install python-ldap`
 
 Mongo
@@ -35,6 +36,7 @@ The rest of the dependencies can all be installed via pip.  A requirements.txt i
 `sudo pip install -r requirements.txt`
 
 To Run (in development mode)
+
 `sudo python app.wsgi`
 
 Production mode was run in Apache 2.2 with mod_wsgi, mod_python, mod_security, and mod_evasion.
